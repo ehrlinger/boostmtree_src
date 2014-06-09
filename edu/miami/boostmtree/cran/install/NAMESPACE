@@ -1,0 +1,12 @@
+useDynLib(_PROJECT_PACKAGE_NAME_)
+
+export(boostmtree,
+       predict.boostmtree,
+       plot.boostmtree,
+       print.boostmtree,
+       partialPlot)
+
+S3method(print, boostmtree)
+S3method(plot, boostmtree)
+S3method(predict, boostmtree)
+

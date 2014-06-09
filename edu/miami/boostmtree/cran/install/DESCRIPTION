@@ -1,0 +1,10 @@
+Package: boostmtree
+Version: _PROJECT_VERSION_ID_
+Date: _PROJECT_DSTAMP_
+Title: Boosted multivariate trees for longitudinal data.
+Author: Hemant Ishwaran <hemant.ishwaran@gmail.com>, Udaya B. Kogalur <ubk@kogalur.com>
+Maintainer: Udaya B. Kogalur <ubk@kogalur.com>
+Depends: R (>= 3.1.0), parallel, Matrix, splines, nlme, lme4, randomForestSRCM
+Description: Implements Friedman's gradient descent boosting algorithm for longitudinal data using multivariate tree base learners.  A time interaction effect is modeled using B-splines and penalized B-splines (P-splines) with estimated adaptive smoothing parameter.
+License: GPL (>=3)
+URL: http://web.ccs.miami.edu/~hishwaran    http://www.kogalur.com
