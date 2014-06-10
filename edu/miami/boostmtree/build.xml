@@ -99,6 +99,7 @@
   -->
   <target name="native" depends="prepare">
     <mkdir dir="${bldDir}/temp"/>
+    <!--
     <copy todir="${bldDir}/temp">
       <fileset dir="cran/install/src">
         <include name="*.c"/>
@@ -116,6 +117,7 @@
         </tokenfilter>
       </filterchain>
     </copy>
+    -->
 
     <echo message="Native code target environment is ${bitSwitch} ${Rlib} ${openMPswitch}"/>
 
