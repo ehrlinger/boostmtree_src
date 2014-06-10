@@ -22,6 +22,10 @@ boostmtree
 # Commiting files
 > git commit -am "."
 
+# Tagging:
+> git tag -a bld2014xxxx
+
+
 # Viewing remote aliases:
 git remote -v
 
@@ -30,6 +34,13 @@ git remote add boostmtree https://github.com/kogalur/boostmtree/
 
 # Viewing remote aliases after you have added the above:
 git remote -v
+
+# Pushing to the cloud:
+git push boostmtree
+
+# Pulling from the trunk:
+git pull boostmree master
+
 
 ------------------------------------------------------------------------
 ------------------------------------------------------------------------
