@@ -52,7 +52,7 @@ TAG             INIT    DESCRIPTION
 ------------------------------------------------------------------------
 TRUNK TAGS
 ------------------------------------------------------------------------
-bld2014xxxx     ubk     Initial check in of all code and build framework
+bld20140610     ubk     Initial check in of all code and build framework
 
 
 ------------------------------------------------------------------------
