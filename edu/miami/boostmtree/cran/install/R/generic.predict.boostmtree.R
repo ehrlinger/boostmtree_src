@@ -2,7 +2,7 @@
 ## prediction mode for boostmtree
 ##
 ## if test y is supplied then an optimal M is determined
-## returned objects (such as VIMP) will depend on this 
+## returned objects (such as VIMP) will depend on this
 ##
 ## obj         boosting object
 ## x           data frame of test set x values
@@ -16,7 +16,7 @@
 ## eps         tolerance value for determining the optimal M
 ##------------------------------------------------------
 
-generic.predict.boostmtree <- function(obj,
+generic.predict.boostmtree <- function(object,
                                        x,
                                        tm,
                                        id,
@@ -32,11 +32,11 @@ generic.predict.boostmtree <- function(obj,
   ##------------------------------------------------------
   ## preliminary checks: all are fatal
   ##------------------------------------------------------
-  
-  if (missing(obj)) {
+
+  if (missing(object)) {
     stop("object is missing!")
   }
-  if (sum(inherits(obj, c("boostmtree", "grow"), TRUE) == c(1, 2)) != 2) {
+  if (sum(inherits(object, c("boostmtree", "grow"), TRUE) == c(1, 2)) != 2) {
     stop("this function only works for objects of class `(boostmtree, grow)'")
   }
 
@@ -48,20 +48,20 @@ generic.predict.boostmtree <- function(obj,
   user.option <- match.call(expand.dots = TRUE)
   partial <- is.hidden.partial(user.option)
 
-  ##------------------------------------------------------ 
+  ##------------------------------------------------------
   ## parse the data: processing/initialization
   ## depends if a partial plot call was initiated
   ##------------------------------------------------------
 
   if (!partial) {## regular call
-    
+
     ## the grow data is used if x is missing
     ## no y is assumed
     if (missing(x)) {
-      X <- obj$x
+      X <- object$x
       n <- nrow(X)
-      D <- obj$D
-      tm <- obj$time
+      D <- object$D
+      tm <- object$time
       tm.unq <- sort(unique(unlist(tm)))
       testFlag <- FALSE
     }
@@ -72,12 +72,12 @@ generic.predict.boostmtree <- function(obj,
       if (!missing(x) && (missing(id) || missing(tm))) {
         X <- x
         n <- nrow(X)
-        tm.unq <- sort(unique(unlist(obj$time)))
+        tm.unq <- sort(unique(unlist(object$time)))
         tm <- lapply(1:n, function(i){tm.unq})
         testFlag <- FALSE
       }
       ## we now assume all test set information is provided: fails otherwise
-      else{                   
+      else{
         if (missing(id)) {
           stop("test set id values are missing\n")
         }
@@ -115,14 +115,14 @@ generic.predict.boostmtree <- function(obj,
   }
 
 
-  ##------------------------------------------------------ 
+  ##------------------------------------------------------
   ## construct the test set bspline basis functions
   ##------------------------------------------------------
 
-  if (obj$d > 0) {
+  if (object$d > 0) {
     if (length(tm.unq) > 1) {
-      D <- cbind(1, bs(tm.unq, knots = attr(obj$D, "knots"),
-                       Boundary.knots = attr(obj$D, "Boundary.knots"), degree = obj$d))
+      D <- cbind(1, bs(tm.unq, knots = attr(object$D, "knots"),
+                       Boundary.knots = attr(object$D, "Boundary.knots"), degree = object$d))
     }
     else {
           stop("only one unique time point")
@@ -140,29 +140,29 @@ generic.predict.boostmtree <- function(obj,
 
   ## basic parameters
   if (missing(M)) {
-    M <- obj$M
+    M <- object$M
     Mflag <- FALSE
   }
   else {
-    M <- max(1, min(M, obj$M))
+    M <- max(1, min(M, object$M))
     Mflag <- TRUE
   }
-  K <- obj$K
-  nu <- obj$nu
-  ntree <- obj$ntree
+  K <- object$K
+  nu <- object$nu
+  ntree <- object$ntree
   p <- ncol(X)
   df.D <- ncol(D)
   xvar.names <- colnames(X)
-   
+
   ## regularization details
   ## allows different nu values for b0 and b1
   nu.vec <- c(nu[1], rep(nu[2], df.D - 1))
-  
+
   ## objects needed for updating beta
-  Ymean <- obj$ymean
-  gamma <- obj$gamma
-  baselearner <- obj$baselearner
-  
+  Ymean <- object$ymean
+  gamma <- object$gamma
+  baselearner <- object$baselearner
+
   ## initialize beta
   if (ntree == 1) {
     beta <- matrix(0, n, df.D)
@@ -171,14 +171,14 @@ generic.predict.boostmtree <- function(obj,
   else {
     beta.list <- NULL
   }
-    
+
   ## vimp
   vimpFlag <- testFlag && importance
   vimp <- NULL
 
-  ## proximity 
+  ## proximity
   prox <- NULL
-  
+
   ##############################################################################
   ##
   ##  Iterate over the M iterations to recursively define the test predictor
@@ -207,20 +207,20 @@ generic.predict.boostmtree <- function(obj,
                       membership = TRUE,
                       ptn.count = K,
                       importance = "none")$ptn.membership)
-      
+
     })
 
     ## membership for noised up data (if requested)
     if (vimpFlag) {
       membershipNoise <- mclapply(1:M, function(m) {
-        
-        
+
+
         Xnoise <- do.call(rbind, lapply(1:p, function(k) {
           X.k <- X
           X.k[, k] <- sample(X.k[, k])
           X.k
         }))
-        
+
         options(rf.cores = 0, mc.cores = 1)
         c(predict.rfsrc(baselearner[[m]],
                         newdata = Xnoise,
@@ -231,12 +231,12 @@ generic.predict.boostmtree <- function(obj,
                         importance = "none")$ptn.membership)
       })
     }
-    
+
     ## proximity of test data to training data
     if (proximity) {
-      
+
       prox <- Reduce("+", mclapply(1:M, function(m) {
-        
+
         options(rf.cores = 0, mc.cores = 1)
         if (!testFlag) {
           predict.rfsrc(baselearner[[m]],
@@ -246,38 +246,38 @@ generic.predict.boostmtree <- function(obj,
                         ptn.count = K,
                         importance = "none",
                         proximity = TRUE)$proximity
-          
+
         }
         else {
           ntest <- nrow(X)
           predict.rfsrc(baselearner[[m]],
-                        newdata = rbind(X, obj$x),
+                        newdata = rbind(X, object$x),
                         outcome.target = 1, ## the target is irrelevant
                         membership = TRUE,
                         ptn.count = K,
                         importance = "none",
                         proximity = TRUE)$proximity[1:ntest, -(1:ntest)]
         }
-        
+
       })) / M
-      
+
     }
 
     ## reset the rf.cores/mc.cores option to its original value
     if (!is.null(rf.cores.old)) options(rf.cores = rf.cores.old)
     if (!is.null(mc.cores.old)) options(mc.cores = mc.cores.old)
-    
+
     for (m in 1:M) {
-    
+
       ##---------------------------------------------------------
       ## pass the x-data down the mth tree
       ## acquire terminal node membership (tnm)
       ## update beta using gamma making use of tnm
       ##---------------------------------------------------------
-    
+
       orgMembership <- gamma[[m]][, 1]
       beta <- t(t(gamma[[m]][match(membership[[m]], orgMembership), -1, drop = FALSE]) * nu.vec)
-    
+
       if (m == 1) {
         beta[, 1] <- beta[, 1] + Ymean##add the overall mean
         beta.list[[m]] <- beta
@@ -287,11 +287,11 @@ generic.predict.boostmtree <- function(obj,
       }
 
       ##---------------------------------------------------------
-      ## vimp calculation: update "vimp beta" from the perturbed X 
+      ## vimp calculation: update "vimp beta" from the perturbed X
       ##---------------------------------------------------------
-      
+
       if (vimpFlag) {
-        
+
         beta.vimp[[m]] <- lapply(1:p, function(k) {
           membership.k <- membershipNoise[[m]][((k-1) * n + 1):(k * n)]
           beta.update.k <- t(t(gamma[[m]][match(membership.k, orgMembership), -1, drop = FALSE]) * nu.vec)
@@ -304,15 +304,15 @@ generic.predict.boostmtree <- function(obj,
             beta.vimp[[m-1]][[k]] + beta.update.k
           }
         })
-        
+
       }
-    
+
     }##loop is complete
 
   }
-  
+
   ##############################################################################
-  ##  
+  ##
   ##
   else{ #####FOREST BASE LEARNER ####
   ##
@@ -320,7 +320,7 @@ generic.predict.boostmtree <- function(obj,
   #############################################################################
 
     stop("TBD TBD TBD")
-    
+
   }
 
   ##---------------------------------------------------------
@@ -334,7 +334,7 @@ generic.predict.boostmtree <- function(obj,
       DbetaT.m[, i][is.element(tm.unq, tm[[i]])]
     }))
   })
-  
+
   if (testFlag) {
     err.rate <- matrix(unlist(lapply(1:M, function(m) {
       c(l1Dist(Y, muhat[[m]]), l2Dist(Y, muhat[[m]]))
@@ -363,11 +363,11 @@ generic.predict.boostmtree <- function(obj,
     Mopt <- M
   }
 
-                       
+
   ##---------------------------------------------------------
   ## variable importance
   ##---------------------------------------------------------
-    
+
   if (vimpFlag) {
     vimp <- rep(0, p)
     vimp <- unlist(mclapply(1:p, function(k) {
@@ -379,13 +379,13 @@ generic.predict.boostmtree <- function(obj,
     }))
     names(vimp) <- xvar.names
   }
-  
+
   ##---------------------------------------------------------
   ##return the promised object
   ##---------------------------------------------------------
-  
+
   pobj <- list(
-       boost.obj = obj,
+       boost.obj = object,
        x = X,
        time = tm,
        time.unq = tm.unq,
@@ -395,12 +395,12 @@ generic.predict.boostmtree <- function(obj,
        err.rate = err.rate,
        vimp = vimp,
        proximity = prox,
-       Mopt = if (testFlag) Mopt else NULL)   
-  
-  class(pobj) <- c("boostmtree", "predict", class(obj)[3])
+       Mopt = if (testFlag) Mopt else NULL)
+
+  class(pobj) <- c("boostmtree", "predict", class(object)[3])
 
   invisible(pobj)
-  
-  
+
+
 }
 

@@ -1,5 +1,5 @@
 predict.boostmtree <-
-  function(obj,
+  function(object,
            x,
            tm,
            id,
@@ -13,7 +13,7 @@ predict.boostmtree <-
 {
 
 
-  result.predict <- generic.predict.boostmtree(obj = obj,
+  result.predict <- generic.predict.boostmtree(object = object,
                                                x = x,
                                                tm = tm,
                                                id = id,
@@ -24,7 +24,7 @@ predict.boostmtree <-
                                                verbose = verbose,
                                                eps = eps,
                                                ...)
-  
+
   return(result.predict)
 
 }

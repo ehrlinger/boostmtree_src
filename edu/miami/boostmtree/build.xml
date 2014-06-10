@@ -9,7 +9,7 @@
   <!-- Generic project properties -->
   <property name="project.name" value="BOOSTMTREE Build Suite"/>
   <property name="project.version.token" value="_PROJECT_VERSION_ID_"/>
-  <property name="project.version" value=".0.0.1"/>
+  <property name="project.version" value="0.0.1"/>
   <property name="project.build.token" value="_PROJECT_BUILD_ID_"/>
   <property name="project.build" value="bld20140605"/>
   <property name="project.pkg.name.token" value="_PROJECT_PACKAGE_NAME_"/>
@@ -62,7 +62,7 @@
     ========================================================================
   -->
   <target name="setSourceTree" depends="internal.init,internal.testSourceTree">
-    <property name="bldDir" value="../../../build"/>
+    <property name="bldDir" value="../../../../build"/>
   </target>
 
 
@@ -232,7 +232,10 @@ ${scriptFileExitLine}
     <mkdir  dir="${bldDir}/cran/install/${project.pkg.name}/data"/>
     <mkdir  dir="${bldDir}/cran/install/${project.pkg.name}/man"/>
     <mkdir  dir="${bldDir}/cran/install/${project.pkg.name}/R"/>
-    <mkdir  dir="${bldDir}/cran/install/${project.pkg.name}/src"/>
+
+    <!--
+        <mkdir  dir="${bldDir}/cran/install/${project.pkg.name}/src"/>
+    -->
 
     <copy todir="${bldDir}/cran/install/${project.pkg.name}/R">
       <fileset dir="${pkgDir}/R">
@@ -289,6 +292,7 @@ ${scriptFileExitLine}
 
     </copy>
 
+    <!--
     <copy todir="${bldDir}/cran/install/${project.pkg.name}/src">
       <fileset dir="${pkgDir}/src">
         <include name="*.c"/>
@@ -316,7 +320,7 @@ ${scriptFileExitLine}
       </filterchain>
 
     </copy>
-
+    -->
 
     <copy file="${pkgDir}/NAMESPACE" todir="${bldDir}/cran/install/${project.pkg.name}">
       <filterchain> <tokenfilter> <replacestring from="${project.pkg.name.token}" to="${project.pkg.name}"/>
@@ -365,6 +369,7 @@ ${scriptFileExitLine}
 
     <copy todir="${bldDir}/cran/install/${project.pkg.name}/data">
       <fileset dir="${bldDir}/cran/install/staged">
+        <include name="*.RData"/>
         <include name="*.rda"/>
       </fileset>
     </copy>
@@ -382,11 +387,12 @@ ${scriptFileExitLine}
   -->
   <target name="source-generic" depends="setSourceTree">
     <mkdir dir="${bldDir}"/>
-    <mkdir dir="${bldDir}/src"/>
-    <zip destfile="${bldDir}/src/${project.core.name}.${project.build}.zip"
+    <mkdir dir="${bldDir}/cran"/>
+    <mkdir dir="${bldDir}/install"/>
+    <zip destfile="${bldDir}/cran/install/${project.core.name}.${project.build}.zip"
          basedir="../../"
          includes="miami/boostmtree/**"/>
-    <tar destfile="${bldDir}/src/${project.core.name}.${project.build}.tar"
+    <tar destfile="${bldDir}/cran/install/${project.core.name}.${project.build}.tar"
          basedir="../../"
          includes="miami/boostmtree/**"/>
   </target>
