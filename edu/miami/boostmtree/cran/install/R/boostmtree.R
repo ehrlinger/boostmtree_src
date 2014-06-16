@@ -17,7 +17,6 @@ require(lme4)
 ## id            subject id
 ## y             outcome
 ## M             number of boosting iterations
-## M.burn        number of burn-in iterations (applies only when lambda is estimated)
 ## nu            boosting regularization parameter (must be in [0,1])
 ##               can be a vector of length two (for b0 and b1)
 ## K             desired number of terminal nodes
@@ -37,16 +36,15 @@ boostmtree <- function(x,
                        id,
                        y,
                        M = 200,
-                       M.burn = 0,
-                       nu = 0.01,
+                       nu = 0.1,
                        K = 3,
                        nknots = 10,
                        d = 3,
-                       lambda,
-                       lambda.iter = 5,
                        pen.ord = 2,
+                       lambda,
+                       lambda.max = 5e3,
+                       lambda.iter = 2,
                        svd.tol = 1e-6,
-                       lambda.max = 1e3,
                        forest.tol = 1e-3,
                        verbose = TRUE,
                        ...)
@@ -55,20 +53,25 @@ boostmtree <- function(x,
   ##------------------------------------------------------
   ## parse the data: processing/initialization
   ## set various dimensions/terms required later
-  ## center y-values for numerical stability
-  ## the y-centered mean must be added back to b0
-  ## the data is sorted on id: thus we sort(id)
+  ## center and scale y-values for numerical stability
+  ## the y-centered mean and scaling values must be corrected later
+  ## data is sorted on the id
   ##------------------------------------------------------
 
   id.unq <- sort(unique(id))
   n <- length(id.unq)
+  x <- as.data.frame(x)
   p <- ncol(x)
   xvar.names <- colnames(x)
   X <- do.call(rbind, lapply(1:n, function(i) {
     x[id == id.unq[i],, drop = FALSE][1,, drop = FALSE]}))
   x <- do.call(rbind, lapply(1:n, function(i) {x[id == id.unq[i],, drop = FALSE]}))
   Ymean <- mean(y, na.rm = TRUE)
-  Y <- lapply(1:n, function(i) {y[id == id.unq[i]] - Ymean})
+  Ysd <- sd(y, na.rm = TRUE)
+  if (Ysd < 1e-6) {
+    Ysd <- 1
+  }
+  Y <- lapply(1:n, function(i) {(y[id == id.unq[i]] - Ymean) / Ysd})
   ni <- unlist(lapply(1:n, function(i) {sum(id == id.unq[i])}))
   id <- sort(id)
   user.option <- match.call(expand.dots = TRUE)
@@ -78,6 +81,8 @@ boostmtree <- function(x,
   ##------------------------------------------------------
 
   ## define the unique time points
+  ## we allow replicated time measurements for an individual
+  ## therefore the match of tm.i to tm.unq is delicate
   tm.unq <- sort(unique(tm))
   n.tm <- length(tm.unq)
   tm.id <- lapply(1:n, function(i) {
@@ -90,7 +95,7 @@ boostmtree <- function(x,
     warning("bsplines require a positive number of knots: eliminating b-spline fitting")
     d <- 0
   }
-  if (d > 0) {
+  if (d >= 1) {
     if (n.tm > 1) {
       bs.tm <- bs(tm.unq, df = nknots + d, degree = d)
       X.tm <- cbind(1, bs.tm)
@@ -114,8 +119,6 @@ boostmtree <- function(x,
 
   ## for each i extract the Di matrix
   D <- lapply(1:n, function(i) {
-    ## we allow replicated time measurements for an individual
-    ## therefore the match of tm.i to tm.unq is delicate
     cbind(X.tm[tm.id[[i]],, drop = FALSE])
   })
 
@@ -125,8 +128,8 @@ boostmtree <- function(x,
   ##------------------------------------------------------
 
   nu <- {if (length(nu) > 1) nu else rep(nu, 2)}
-  if (sum(!(0 <= nu & nu <= 1)) > 0) {
-    stop("regularization parameter (nu) must be in [0,1]")
+  if (sum(!(0 < nu & nu <= 1)) > 0) {
+    stop("regularization parameter (nu) must be in (0,1]")
   }
   nu.vec <- c(nu[1], rep(nu[2], df.D - 1))
 
@@ -194,10 +197,6 @@ boostmtree <- function(x,
     }
   }
 
-  ## use burn-in?
-  if (!lambda.est.flag) {
-    M.burn <- 0
-  }
 
   ##------------------------------------------------------
   ## initialization
@@ -215,9 +214,8 @@ boostmtree <- function(x,
    membership.list <- gamma.list <- NULL
    baselearner <- vector("list", length = M)
   }
-  sigma.vec <- phi.vec <- rho.vec <- rep(0, M)
-  sigma.initial <- var(unlist(Y), na.rm = TRUE)
-  phi <- 1
+  lambda.vec <- phi.vec <- rho.vec <- rep(0, M)
+  lambda.initial <- var(unlist(Y), na.rm = TRUE)
 
   ## rho initialization
   rho.fit.flag <- is.hidden.rho(user.option)
@@ -232,10 +230,10 @@ boostmtree <- function(x,
     }
   }
 
-  ## initialize sigma (lambda * phi * (1-rho))
-  sigma <- var(unlist(Y), na.rm = TRUE)
+  ## initialize sigma (lambda * (1-rho))
+  sigma <- 1
   if (!lambda.est.flag) {
-    sigma <- lambda * var(unlist(Y), na.rm = TRUE) * (1 - rho)
+    sigma <- lambda * (1 - rho)
   }
 
   Y.names <- paste("Y", 1:df.D, sep = "")
@@ -251,20 +249,15 @@ boostmtree <- function(x,
 
   if (verbose) cat("  implementing multivariate boosting...\n")
 
-  for (m in 1:(M.burn + M)) {
+  for (m in 1:M) {
 
     if (verbose) {
-      if (m <= M.burn) {
-        cat("\t-- burn-in iteration:", m, "\n")
-      }
-      else {
-        cat("\t-- iteration:", m - M.burn, "\n")
-      }
+      cat("\t-- iteration:", m, "\n")
     }
 
     ##---------------------------------------------------------
     ## step 3: calculate the negative gradient
-    ## we discard the unnecessary (phi*(1-rho))^{-1} constant
+    ## we discard the unnecessary (1-rho)^{-1} constant
     ##---------------------------------------------------------
 
     gm <- t(matrix(unlist(lapply(1:n, function(i) {
@@ -334,9 +327,8 @@ boostmtree <- function(x,
       ## The pruned membership is an n x 1 vector of non-consecutive
       ## integers.  They map immutably to NODE_ID of the tree.
       membership <- membership.org <- c(result.pred$ptn.membership)
-      if (m > M.burn) {
-        membership.list[[m - M.burn]] <- membership.org
-      }
+      membership.list[[m]] <- membership.org
+      
       ## Recode the membership to be sequential
       membership <- as.numeric(factor(membership))
       ptn.id <- unique(membership)
@@ -347,9 +339,7 @@ boostmtree <- function(x,
 
 
     ## save the base learner
-    if (m > M.burn) {
-      baselearner[[m - M.burn]] <- rfsrc.obj
-    }
+    baselearner[[m]] <- rfsrc.obj
 
 
     ##############################################################################
@@ -395,22 +385,21 @@ boostmtree <- function(x,
         })
 
         ## ----------------------------------------------------------------------
-        ## iterate to estimate gamma and sigma (= lambda * phi)
+        ## iterate to estimate lambda 
         ## ----------------------------------------------------------------------
 
-        ## initialize sigma
-        sigma.hat <- sigma.initial
+        ## initialize lambda.hat
+        lambda.hat <- lambda.initial
 
         ## iterative loop
         for (k in 1:lambda.iter) {
 
-          ## BLUP for random effects (u_k) and fixed effects (alpha_k) conditional on sigma
-          blup.obj <-  blup.solve(transf.data, membership, sigma.hat, Kmax)
+          ## BLUP for random effects (u_k) and fixed effects (alpha_k) conditional on lambda
+          blup.obj <-  blup.solve(transf.data, membership, lambda.hat, Kmax)
 
-
-          ## sigma method of moments estimator conditional on BLUP
-          ## robust rss calculation used to avoid deflating sigma estimate
-          sigma.obj <- lapply(1:Kmax, function(k) {
+          ## lambda method of moments estimator conditional on BLUP
+          ## robust rss calculation used to avoid deflating lambda estimate
+          lambda.obj <- lapply(1:Kmax, function(k) {
             pt.k <- (membership == k)
             Z <- do.call(rbind, lapply(which(pt.k), function(j) {transf.data[[j]]$Znew}))
             X <- do.call(rbind, lapply(which(pt.k), function(j) {transf.data[[j]]$Xnew}))
@@ -423,70 +412,60 @@ boostmtree <- function(x,
             resid <- resid[robust.pt]
             return(list(trace.Z = sum(diag(ZZ)), rss = rss, resid = resid))
           })
-          num <- sum(unlist(lapply(1:Kmax, function(k) {sigma.obj[[k]]$trace.Z})), na.rm = TRUE)
-          den <- sum(unlist(lapply(1:Kmax, function(k) {sigma.obj[[k]]$rss})), na.rm = TRUE)
-          N <- sum(unlist(lapply(1:Kmax, function(k) {sigma.obj[[k]]$resid})), na.rm = TRUE)
+          num <- sum(unlist(lapply(1:Kmax, function(k) {lambda.obj[[k]]$trace.Z})), na.rm = TRUE)
+          den <- sum(unlist(lapply(1:Kmax, function(k) {lambda.obj[[k]]$rss})), na.rm = TRUE)
+          N <- sum(unlist(lapply(1:Kmax, function(k) {lambda.obj[[k]]$resid})), na.rm = TRUE)
 
           if (!is.na(den) && den > (.99 * N)) {## ensure that denominator is larger than degrees of freedom
-            sigma.hat <- num / (den - .99 * N)
+            lambda.hat <- num / (den - .99 * N)
           }
           else {
-            sigma.hat <- min(sigma.hat, lambda.max * phi)
+            lambda.hat <- min(lambda.hat, lambda.max)
           }
 
-          ## cap sigma.hat
-          sigma.hat <- min(sigma.hat, lambda.max * phi)
-
-          ## update BLUP on last iteration, conditional on sigma
-          if (k == lambda.iter) {
-            blup.obj <-  blup.solve(transf.data, membership, sigma.hat, Kmax)
-          }
+          ## cap lambda.hat
+          lambda.hat <- min(lambda.hat, lambda.max)
 
         }
 
-        ## update gamma (don't forget to transform the random effects!)
-        gamma <- lapply(1:Kmax, function(k) {
-          c(blup.obj[[k]]$fix.eff, pen.inv.sqrt.matx %*% blup.obj[[k]]$rnd.eff)
-        })
-
+        ## update lambda, sigma
+        lambda <- lambda.hat 
+        sigma <- lambda * (1 - rho) 
+          
       }
 
       ##---------------------------------------------------------
       ## LEAST SQUARES SOLUTION FOR GAMMA: ntree = 1
-      ## applies only when mixed models are not used
-      ## step 4(b): solve for gamma
+      ## step 4(b)
       ##
-      ## Xnew      pseudo x matrix
-      ## YnewSum   summed pseudo y value
-      ## XnewSum   summed pseudo x values
+      ## Xnew      WLS x-matrix
+      ## YnewSum   summed pseudo y-value
+      ## XnewSum   summed pseudo WLS x-values
       ## gamma     weighted least squares solution
       ##---------------------------------------------------------
 
-      if (!lambda.est.flag) {
-        Xnew <- mclapply(1:n, function(i) {
-          rmi <- rho / (1 + (ni[i] - 1) * rho)
-          Wi <- diag(1, ni[i]) - matrix(rmi, ni[i], ni[i])
-          t(D[[i]]) %*% Wi %*% D[[i]]
-        })
-        gamma <- lapply(1:Kmax, function(k) {
-          pt.k <- (membership == k)
-          ##sum the pseudo y's over a given terminal node
-          YnewSum <- colSums(gm[pt.k,, drop = FALSE])
-          ##sum the pseudo x's over a given terminal node
-          XnewSum <- Reduce("+", lapply(which(pt.k), function(j) {Xnew[[j]]}))
-          ## add penalization
-          XnewSum <- XnewSum + sigma * pen.lsq.matx
-          ## solve using QR
-          qr.obj <- tryCatch({qr.solve(XnewSum, YnewSum)}, error = function(ex){NULL})
-          if (!is.null(qr.obj)) {
-            qr.obj
-          }
-          else {
-            rep(0, df.D)
-          }
-        })
-      }
-
+      Xnew <- mclapply(1:n, function(i) {
+        rmi <- rho / (1 + (ni[i] - 1) * rho)
+        Wi <- diag(1, ni[i]) - matrix(rmi, ni[i], ni[i])
+        t(D[[i]]) %*% Wi %*% D[[i]]
+      })
+      gamma <- lapply(1:Kmax, function(k) {
+        pt.k <- (membership == k)
+        ##sum the pseudo y's over a given terminal node
+        YnewSum <- colSums(gm[pt.k,, drop = FALSE])
+        ##sum the pseudo x's over a given terminal node
+        XnewSum <- Reduce("+", lapply(which(pt.k), function(j) {Xnew[[j]]}))
+        ## add penalization
+        XnewSum <- XnewSum + sigma * pen.lsq.matx
+        ## solve using QR
+        qr.obj <- tryCatch({qr.solve(XnewSum, YnewSum)}, error = function(ex){NULL})
+        if (!is.null(qr.obj)) {
+          qr.obj
+        }
+        else {
+          rep(0, df.D)
+        }
+      })
 
       ##---------------------------------------------------------
       ## step 4(c): save gamma: ntree = 1
@@ -498,23 +477,11 @@ boostmtree <- function(x,
       gamma.matx[, 1] <- sort(unique(membership.org))
       gamma.matx[, 2:(df.D+1)] <- matrix(unlist(gamma), ncol = df.D, byrow = TRUE)
 
-      if (m > M.burn) {
-        gamma.list[[m - M.burn]] <- gamma.matx
-      }
+      gamma.list[[m]] <- gamma.matx
 
       ##---------------------------------------------------------
       ## step 5: update beta and mu: ntree = 1
       ##---------------------------------------------------------
-
-      ## reset beta if a burn-in is used
-      ## shut-off lamda adaptivity
-      if (lambda.est.flag && m == (M.burn + 1)) {
-        beta <- matrix(0, n, df.D)
-        if (M.burn > 0) {
-          lambda <- sigma.hat / phi ####TBD
-          lambda.est.flag <- FALSE
-        }
-      }
 
       ## beta update
       beta.update <- matrix(unlist(lapply(1:n, function(i) {
@@ -608,10 +575,12 @@ boostmtree <- function(x,
                              x  = x,
                              tm = unlist(lapply(1:n, function(i) {tm[id == id.unq[i]]})),
                              id = unlist(lapply(1:n, function(i) {rep(id.unq[i], ni[i])})))
-    gls.obj <- tryCatch({gls(y ~ ., data = resid.data, corr = corCompSymm(form = ~ 1 | id))},
+    gls.obj <- tryCatch({gls(y ~ ., data = resid.data,
+                        correlation = corCompSymm(form = ~ 1 | id))},
                         error = function(ex){NULL})
     if (is.null(gls.obj)) {
-      gls.obj <- tryCatch({gls(y ~ 1, data = resid.data, corr = corCompSymm(form = ~ 1 | id))},
+      gls.obj <- tryCatch({gls(y ~ 1, data = resid.data,
+                          correlation = corCompSymm(form = ~ 1 | id))},
                           error = function(ex){NULL})
     }
     if (!is.null(gls.obj)) {
@@ -622,51 +591,37 @@ boostmtree <- function(x,
       }
     }
 
-    if (m > M.burn) {
-      phi.vec[m - M.burn] <- phi
-      rho.vec[m - M.burn] <- rho
-    }
+    phi.vec[m] <- phi * Ysd ^ 2##scale by the overall variance
+    rho.vec[m] <- rho
 
     if (verbose) {
-      cat("phi   :", phi, "\n")
-      cat("rho   :", rho, "\n")
+      cat("phi   :", phi.vec[m], "\n")
+      cat("rho   :", rho.vec[m], "\n")
     }
 
     ##---------------------------------------------------------
-    ## step 8: update sigma (if lambda is not adaptively estimated)
+    ## step 8: update sigma, save lambda
     ##---------------------------------------------------------
 
-    if (!lambda.est.flag) {
-      sigma <- lambda * phi * (1 - rho)
-      if (verbose) {
-        cat("sigma :", sigma, "\n")
-        cat("lambda:", sigma / (phi * (1-rho)), "\n")
-      }
-      if (m > M.burn) {
-        sigma.vec[m - M.burn] <- sigma
-      }
+    sigma <- lambda * (1 - rho) 
+    lambda.vec[m] <- lambda
+    if (verbose) {
+      cat("lambda:", lambda.vec[m], "\n")
     }
 
-    if (lambda.est.flag && m > M.burn) {
-      if (verbose) {
-        cat("sigma :", sigma.hat, "\n")
-        cat("lambda:", sigma.hat / phi, "\n")
-      }
-      sigma.vec[m - M.burn] <- sigma.hat * (1 - rho)
-    }
 
 
   }##end boosting iteration
 
   ##---------------------------------------------------------
-  ## add the Y mean back
+  ## rescale by the std and add the Y mean back
   ##---------------------------------------------------------
 
-  Y <- lapply(1:n, function(i) {y[id == id.unq[i]]})
+  beta <- beta * Ysd
   if (ntree == 1) {
     beta[, 1] <- beta[, 1] + Ymean
   }
-  mu <- lapply(1:n, function(i) {c(mu[[i]] + Ymean)})
+  mu <- lapply(1:n, function(i) {c(mu[[i]] * Ysd + Ymean)})
 
   ##---------------------------------------------------------
   ## return the promised object
@@ -675,12 +630,13 @@ boostmtree <- function(x,
   obj <- list(x = X,
               time = lapply(1:n, function(i) {tm[id == id.unq[i]]}),
               id = id,
-              y = Y,
+              y = lapply(1:n, function(i) {y[id == id.unq[i]]}),
               ymean = Ymean,
+              ysd = Ysd,
               gamma = gamma.list,
               beta = beta,
               mu = mu,
-              lambda = (sigma.vec / (phi.vec * (1 - rho.vec))),
+              lambda = lambda.vec,
               phi = phi.vec,
               rho = rho.vec,
               baselearner = baselearner,

@@ -41,15 +41,16 @@ blup.solve <- function(transf.data, membership, sigma, Kmax) {
     V = XZ %*% solve(Q, diag(1, nrow(ZZ)))
     A = XX - V %*% t(XZ)
     b = XY - V %*% ZY
-    fix.eff <- qr.solve(A, b)
+    fix.eff <- tryCatch({qr.solve(A, b)}, error = function(ex){NULL})
+    if (is.null(fix.eff)) {
+      fix.eff <- rep(0, ncol(A))####TBD TBD TBD: what is a good default value?
+    }
+   
     
     ## .. now solve the random effects
-    qr.obj <- tryCatch({qr.solve(Q, ZY - t(XZ) %*% fix.eff)}, error = function(ex){NULL})
-    if (!is.null(qr.obj)) {
-      rnd.eff <- qr.obj
-    }
-    else {
-      rnd.eff <- rep(NA, ncol(Q))####TBD TBD TBD: what is a good default value?
+    rnd.eff <- tryCatch({qr.solve(Q, ZY - t(XZ) %*% fix.eff)}, error = function(ex){NULL})
+    if (is.null(rnd.eff)) {
+      rnd.eff <- rep(0, ncol(Q))####TBD TBD TBD: what is a good default value?
     }
 
     ## .. test the accuracy of the solution
@@ -68,6 +69,24 @@ const.sqrt <- function(ni, rho) {
   ri <- rho / (1 + (ni - 1) * rho)
   as.numeric(Re(polyroot(c(ri, -2, ni))))[1]
 }
+
+
+## gls mean-squared error
+gls.mse  <- function(f, dta, trn) {
+  f <- as.formula(f)
+  gls.grow <- tryCatch({gls(f, data = dta[trn, ], correlation = corCompSymm(form = ~ 1 | id))},
+                       error = function(ex){NULL})
+  if (!is.null(gls.grow)) {
+    gls.pred  <- tapply(model.matrix(f, dta[-trn,]) %*% gls.grow$coef,
+                        dta[-trn, "id"], function(x) {x})
+    y.test <- tapply(dta[-trn, "y"], dta[-trn, "id"], function(x) {x})
+    l2Dist(gls.pred, y.test)
+  }
+  else {
+    NA
+  }
+}
+
 
 ## hidden bootstrap value
 is.hidden.bootstrap <-  function (user.option) {
@@ -122,7 +141,7 @@ is.hidden.rho <-  function (user.option) {
 }
 
 
-#l1 norm
+##l1 norm
 l1Dist <- function(y1, y2) {
   if (length(y1) != length(y2)) {
     stop("y1 and y2 must have same the length\n")
@@ -132,7 +151,7 @@ l1Dist <- function(y1, y2) {
   })), na.rm = TRUE)
 }
 
-#l2 norm
+##l2 norm
 l2Dist <- function(y1, y2) {
   if (length(y1) != length(y2)) {
     stop("y1 and y2 must have same the length\n")
@@ -140,6 +159,17 @@ l2Dist <- function(y1, y2) {
   mean(unlist(lapply(1:length(y1), function(i) {
     sqrt(mean((unlist(y1[[i]]) - unlist(y2[[i]]))^2, na.rm = TRUE))
   })), na.rm = TRUE)
+}
+
+## modified lowess
+lowess.mod <- function(x, y, ...) {
+  na.pt <- is.na(x) | is.na(y)
+  if (all(na.pt) || sd(y, na.rm = TRUE) == 0) {
+    return(list(x = x, y = y))
+  }
+  else {
+    lowess(x[!na.pt], y[!na.pt], ...)
+  }
 }
 
 ## parses boosted tree to determine variable split depth

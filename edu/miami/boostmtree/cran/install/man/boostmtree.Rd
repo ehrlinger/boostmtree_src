@@ -1,17 +1,12 @@
 \name{boostmtree}
 \alias{boostmtree}
 \alias{_PROJECT_PACKAGE_NAME_}
-\title{Boosted multivariate trees for longitudinal data.}
+\title{Boosted multivariate trees for longitudinal data}
 \description{
-  A random forest (Breiman, 2001) is grown using user supplied training
-  data.  Applies when the response (outcome) is numeric, categorical
-  (factor), or right-censored (including competing risk), and yields
-  regression, classification, and survival forests, respectively.  The
-  resulting forest, informally referred to as a RF-SRC object, contains
-  many useful values which can be directly extracted by the user and/or
-  parsed using additional functions (see the examples below).  This is
-  the main entry point to the \pkg{_PROJECT_PACKAGE_NAME_} package.
-
+  Implements Friedman's gradient descent boosting algorithm for
+  longitudinal data using multivariate tree base learners.  A time
+  interaction effect is modeled using B-splines and penalized B-splines
+  (P-splines) with estimated adaptive smoothing parameter.
 }
 \usage{
  boostmtree(x,
@@ -19,209 +14,162 @@
    id,
    y,
    M = 200,
-   M.burn = 0,
-   nu = 0.01,
+   nu = 0.1,
    K = 3,
    nknots = 10,
    d = 3,
-   lambda,
-   lambda.iter = 5,
    pen.ord = 2,
+   lambda,
+   lambda.max = 5e3,
+   lambda.iter = 2,
    svd.tol = 1e-6,
-   lambda.max = 1e3,
    forest.tol = 1e-3,
    verbose = TRUE,
    ...)
 }
 \arguments{
-    \item{x}{....}
-    \item{tm}{....}
-    \item{id}{....}
-    \item{y}{....}
-    \item{M}{...}
-    \item{M.burn}{....}
-    \item{nu}{....}
-    \item{K}{....}
-    \item{nknots}{....}
-    \item{d}{....}
-    \item{lambda}{....}
-    \item{lambda.iter}{....}
-    \item{pen.ord}{....}
-    \item{svd.tol}{....}
-    \item{lambda.max}{....}
-    \item{forest.tol}{....}
-    \item{verbose}{....}
+    \item{x}{Data frame (or matrix) containing the x-values.   Rows
+      must be duplicated to match the number of time points for an individual.
+      That is, if individual \emph{i} has \emph{n[i]} outcome y-values,
+      then there must be \emph{n[i]} duplicate rows of \emph{i}'s x-value.}
+    \item{tm}{Vector of time values, one entry for each row in \code{x}.}
+    \item{id}{Unique subject identifier, one entry for each row in \code{x}.}
+    \item{y}{Observed y-value, one entry for each row in \code{x}.}
+    \item{M}{Number of boosting iterations}
+    \item{nu}{Boosting regularization parameter.  A value in (0,1].}
+    \item{K}{Number of terminal nodes used for the multivariate tree learner.}
+    \item{nknots}{Number of knots used for the B-spline for modeling the
+    time interaction effect.}
+    \item{d}{Degree of the piecewise B-spline polynomial (no time
+      effect is fit when d < 1).}
+    \item{pen.ord}{Differencing order used to define the penalty with
+      increasing values implying greater smoothness.}
+    \item{lambda}{Smoothing (penalty) parameter used for B-splines with
+      increasing values associated with increasing
+      smoothness/penalization. If missing, or non-positive, the value is
+      estimated adaptively using a mixed models approach.}
+    \item{lambda.max}{Tolerance used for adaptively estimated lambda
+      (caps it).  For experts only.}
+    \item{lambda.iter}{Number of iterations used to estimate lambda
+      (only applies when lambda is not supplied and adaptive smoothing
+      is employed).}
+    \item{svd.tol}{Tolerance value used in the SVD calculation of the
+      penalty matrix.  For experts only.}
+    \item{forest.tol}{Tolerance used for forest weighted least squares
+      solution.  Experimental and for experts only.}
+    \item{verbose}{Should verbose output be printed?}
     \item{...}{Further arguments passed to or from other methods.}
 }
 \details{
-  blah blah blah blah
+  Each individual has observed y-values over possibly different time
+  points, and with possibly differing number of time points.  Given the
+  observed y-values, the time points, and the x-value for each
+  individual, the mean value of y is estimated using gradient boosting
+  in which the gradient is derived from a criterion function involving a
+  working variance matrix for y specified as an equicorrelation matrix
+  with parameter \emph{rho} multiplied by a variance parameter
+  \emph{phi}.  Multivariate trees are used for the base learner and
+  weighted least squares are used to solve the line-search.  A
+  mixed-model formulation is used to estimate the smoothing parameter
+  associated with the B-splines used for the time-interaction effect,
+  although the user can manually set the smoothing parameter as well.
 }
 \value{
-     An object of class \code{(rfsrc, grow)} with the following
+     An object of class \code{(boostmtree, grow)} with the following
      components:
 
-     \item{call}{The original call to \command{rfsrc}.}
-     \item{formula}{The formula used in the call.}
-     \item{family}{The family used in the analysis.}
-     \item{n}{Sample size of the data (depends upon \code{NA}'s, see \option{na.action}).}
-     \item{ntree}{Number of trees grown.}
-     \item{mtry}{Number of variables randomly selected for splitting at each node.}
-     \item{nodesize}{Minimum size of terminal nodes.}
-     \item{nodedepth}{Maximum depth allowed for a tree.}
-     \item{splitrule}{Splitting rule used.}
-     \item{nsplit}{Number of randomly selected split points.}
-     \item{yvar}{y-outcome values.}
-     \item{yvar.names}{A character vector of the y-outcome names.}
-     \item{xvar}{Data frame of x-variables.}
-     \item{xvar.names}{A character vector of the x-variable names.}
-     \item{xvar.wt}{Vector of non-negative weights specifying the
-        probability used to select a variable for splitting a node.}
-     \item{split.wt}{Vector of non-negative weights where entry
-        \code{k}, after normalizing, is the multiplier by which the
-	  split statistic for a covariate is adjusted.}
-     \item{leaf.count}{Number of terminal nodes for each tree in the
-         forest. Vector of length \option{ntree}.  A value of zero indicates
-         a rejected tree (can occur when imputing missing data).
-         Values of one indicate tree stumps.}
-     \item{proximity}{Proximity matrix recording the frequency of pairs of data points
-         occur within the same terminal node.}
-     \item{forest}{If \option{forest=TRUE}, the forest object is returned.
-         This object is used for prediction with new test data
-	 sets and is required for other R-wrappers.}
-     \item{membership}{Matrix recording terminal node membership where
-       each column contains the node number that a case falls in for that tree.}
-     \item{inbag}{Matrix recording inbag membership where each column
-     contains the number of times that a case appears in the bootstrap
-     sample for that tree.}
-     \item{var.used}{Count of the number of times a variable is used in
-       growing the forest.}
-     \item{imputed.indv}{Vector of indices for cases with missing
-         values.}
-     \item{imputed.data}{Data frame of the imputed data. The first
-	 column(s) are reserved for the y-responses, after which the
-	 x-variables are listed.}
-     \item{split.depth}{Matrix [i][j] or array [i][j][k] recording the
-           minimal depth for variable [j] for case [i], either averaged over
-           the forest, or by tree [k].}
-     \item{node.stats}{Split statistics returned when
-     \code{statistics=TRUE} which can be parsed using \command{stat.split}.}
-     \item{err.rate}{Tree cumulative OOB error rate.}
-     \item{importance}{Variable importance (VIMP) for each x-variable.}
-     \item{predicted}{In-bag predicted value.}
-     \item{predicted.oob}{OOB predicted value.}\cr
-}
-\note{
-  \enumerate{
-    \item The returned object depends heavily on the family.  In
-    particular, \code{predicted} and \code{predicted.oob} are the
-    following values calculated using in-bag and OOB data.
-    \enumerate{
-      \item For regression, a vector of predicted y-responses.
-
-      \item For classification, a matrix with columns containing the
-      estimated class probability for each class.
-
-      \item For survival, a vector of mortality values (Ishwaran et al.,
-      2008) representing estimated risk for each individual calibrated
-      to the scale of the number of events (as a specific example, if
-      \emph{i} has a mortality value of 100, then if all individuals had
-      the same x-values as \emph{i}, we would expect an average of 100
-      events).  Also included in the grow object are matrices containing
-      the CHF and survival function.  Each row corresponds to an
-      individual's ensemble CHF or survival function evaluated at each
-      time point in \code{time.interest}.
-
-      \item For competing risks, a matrix with one column for each event
-      recording the expected number of life years lost due to the event
-      specific cause up to the maximum follow up (Ishwaran et al.,
-      2013).  The grow object also contains the cause-specific
-      cumulative hazard function (CSCHF) and the cumulative incidence
-      function (CIF) for each event type.  These are encoded as a
-      three-dimensional array, with the third dimension used for the
-      event type, each time point in \code{time.interest} making up the
-      second dimension (columns), and the case (individual) being the
-      first dimension (rows).
-    }
-
-    \item Different R-wrappers are provided to aid in parsing the grow
-    object.
-  }
+     \item{x}{The x-values, but with only one row per individual
+       (i.e. duplicated rows are removed). Values sorted on \code{id}.}
+     \item{time}{List with each component containing the time
+       points for a given individual. Values sorted on \code{id}.}
+     \item{id}{Sorted subject identifier.}
+     \item{y}{List with each component containing the observed
+       y-values for a given individual. Values sorted on \code{id}.}
+     \item{ymean}{Overall mean of y-values for all individuals.}
+     \item{ysd}{Overall standard deviation of y-values for all individuals.}
+     \item{gamma}{List of length \emph{M}, with each component
+       containing the boosted tree fitted values.}
+     \item{beta}{Matrix of estimated coefficient values for each
+       individual.}
+     \item{mu}{List with each component containing the estimated mean
+       values for an individual.  That is, each component contains the
+       estimated time-profile for an individual.}
+     \item{lambda}{Smoothing parameter.}
+     \item{phi}{Variance parameter.}
+     \item{rho}{Correlation parameter.}
+     \item{baselearner}{List of length \emph{M} containing the base learners.}
+     \item{membership}{List of length \emph{M}, with each component
+       containing the terminal node membership for a given boosting
+       iteration.}
+     \item{D}{Design matrix for time.}
+     \item{d}{Degree of the piecewise B-spline polynomial.}
+     \item{K}{Number of terminal nodes.}
+     \item{M}{Number of boosting iterations.}
+     \item{nu}{Boosting regularization parameter.}
+     \item{ntree}{Number of trees.}
 }
 \author{
     Hemant Ishwaran and Udaya B. Kogalur
 }
 \references{
-    Breiman L., Friedman J.H., Olshen R.A. and Stone C.J.
-    \emph{Classification and Regression Trees}, Belmont, California, 1984.
+  Friedman J.H. (2001). Greedy function approximation: a gradient
+  boosting machine, \emph{Ann. of Statist.}, 5:1189-1232.
 
-    Breiman L. (2001). Random forests, \emph{Machine Learning}, 45:5-32.
-
-    Cutler A. and Zhao G. (2001). Pert-Perfect random tree ensembles.
-    \emph{Comp. Sci. Statist.}, 33: 490-497.
-
-    Gray R.J. (1988).  A class of k-sample tests for comparing the
-    cumulative incidence of a competing risk, \emph{Ann. Statist.},
-    16: 1141-1154.
-
-    Harrell et al. F.E. (1982).  Evaluating the yield of medical tests,
-    \emph{J. Amer. Med. Assoc.}, 247:2543-2546.
-
-    Hothorn T. and Lausen B. (2003). On the exact distribution of maximally selected
-    rank statistics, \emph{Comp. Statist. Data Anal.}, 43:121-137.
-
-    Ishwaran H. (2007).  Variable importance in binary regression
-    trees and forests,  \emph{Electronic J. Statist.}, 1:519-537.
-
-    Ishwaran H. and Kogalur U.B. (2007).  Random survival forests for R,
-    \emph{Rnews}, 7(2):25-31.
-
-    Ishwaran H., Kogalur U.B., Blackstone E.H. and Lauer M.S.
-    (2008).  Random survival forests, \emph{Ann. App.
-    Statist.}, 2:841-860.
-
-    Ishwaran H., Kogalur U.B., Gorodeski E.Z, Minn A.J. and
-    Lauer M.S. (2010).  High-dimensional variable selection for survival
-    data.  \emph{J. Amer. Statist. Assoc.}, 105:205-217.
-
-    Ishwaran H. (2013).  The effect of splitting on random forests.
-
-    Ishwaran H., Gerds T.A., Kogalur U.B., Moore R.D., Gange S.J. and Lau
-    B.M. (2014). Random survival forests for competing risks.  To appear
-    in \emph{Biostatistics}.
-
-    Lin Y. and Jeon Y. (2006).  Random forests and adaptive nearest
-    neighbors, \emph{J. Amer. Statist. Assoc.}, 101:578-590.
-
-    LeBlanc M. and Crowley J. (1993).  Survival trees by goodness of split,
-    \emph{J. Amer. Statist. Assoc.}, 88:457-467.
-
-    Loh W.-Y and Shih Y.-S (1997).  Split selection methods for
-    classification trees, \emph{Statist. Sinica}, 7:815-840.
-
-    Mogensen, U.B, Ishwaran H. and Gerds T.A. (2012). Evaluating random
-    forests for survival analysis using prediction error curves,
-    \emph{J.  Statist. Software}, 50(11): 1-23.
-
-    Segal M.R. (1988).  Regression trees for censored data,
-    \emph{Biometrics},  44:35-47.
+  Ishwaran et al. (2014).  Boosting multivariate trees for
+  longitudinal data.
 }
 \seealso{
-  \command{\link{find.interaction}},
-  \command{\link{impute.rfsrc}},
-  \command{\link{max.subtree}},
-  \command{\link{plot.competing.risk}},
-  \command{\link{plot.rfsrc}},
-  \command{\link{plot.survival}},
-  \command{\link{plot.variable}},
-  \command{\link{predict.rfsrc}},
-  \command{\link{print.rfsrc}},
-  \command{\link{rf2rfz}},RF_MLTVR_BEG
-  \command{\link{rfsrcSyn}},
-  \command{\link{stat.split}},RF_MLTVR_END
-  \command{\link{var.select}},
-  \command{\link{vimp}}
+  \command{\link{partialPlot}}
+  \command{\link{plot.boostmtree}},
+  \command{\link{predict.boostmtree}},
+  \command{\link{print.boostmtree}}
 }
 \examples{
+##------------------------------------------------------------
+## Synthetic example
+##
+##  high correlation, quadratic time with quadratic interaction
+##-------------------------------------------------------------
+n <- 50
+N <- 5
+rho <- .80
+phi <- 1
+dta <- data.frame(do.call("rbind", lapply(1:n, function(i) {
+  Ni <- round(runif(1, 1, 3 * N))
+  corr.mat <- matrix(rho, nrow=Ni, ncol=Ni)
+  diag(corr.mat) <- 1
+  eps <- sqrt(phi) * t(chol(corr.mat)) \%*\% rnorm(Ni)
+  x1 <- rnorm(1)
+  x2 <- runif(1, 2, 3)
+  x <- c(x1, x2)
+  tm <- sample((1:(3 * N))/N, size = Ni, replace = TRUE)
+  y <- 1.5 + 2.5 * x1 - .65 * (tm ^ 2) * (x2 ^ 2)  + eps
+  cbind(matrix(x, nrow = Ni, ncol = length(x), byrow = TRUE),
+        tm, rep(i, Ni), y)
+})))
+colnames(dta) <- c("x1", "x2", "time", "id", "y")
+
+#basic boosting call (M is set to a small value here purely for illustration)
+boost.grow <- boostmtree(dta[, 1:2], dta[, 3], dta[, 4], dta[, 5], M = 100)
+
+#print results
+print(boost.grow)
+
+#plot.results
+plot(boost.grow)
+
+\donttest{
+##----------------------------------------------------------------------------
+## spirometry data
+##----------------------------------------------------------------------------
+data(spirometry, package = "_PROJECT_PACKAGE_NAME_")
+
+## boosting call: B-spline with 3 degree polynomial and 15 knots
+spr.obj <- boostmtree(spirometry$features, spirometry$time, spirometry$id, spirometry$y,
+                        M = 200, nu = .05, d = 3, nknots = 15)
+plot(spr.obj)
 }
-\keyword{forest}
+
+}
+\keyword{boosting}
 

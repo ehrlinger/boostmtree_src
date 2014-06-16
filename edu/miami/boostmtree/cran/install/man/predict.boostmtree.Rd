@@ -2,8 +2,8 @@
 \alias{predict.boostmtree}
 \title{Prediction for Boosted multivariate trees for longitudinal data.}
 \description{
-   Obtain predicted values using a forest.  Also returns performance
-   values if the test data contains y-outcomes.
+   Obtain predicted values.  Also returns test-set performance
+   if the test data contains y-outcomes.
 }
 \usage{\method{predict}{boostmtree}(object,
  x,
@@ -18,145 +18,120 @@
  ...)
 }
 \arguments{
-  \item{object}{....}
-  \item{x}{....}
-  \item{tm}{....}
-  \item{id}{....}
-  \item{y}{....}
-  \item{M}{....}
-  \item{importance}{....}
-  \item{proximity}{....}
-  \item{verbose}{....}
-  \item{eps}{....}
+  \item{object}{A boosting object of class \code{(boostmtree, grow)}.}
+  \item{x}{Data frame (or matrix) containing test set x-values.  Rows
+    must be duplicated to match the number of time points for an
+    individual. If missing, the training x values are used and
+    \code{tm}, \code{id} and \code{y} are not required.}
+  \item{tm}{Time values for each test set individual with one entry for
+    each row of \code{x}.  Optional, but if missing, the set of unique time
+    values from the training values are used for each individual and no
+    test-set performance values are returned.}
+  \item{id}{Unique subject identifier, one entry for each row in
+    \code{x}.  Optional, but if missing, each individual is assumed to
+    have a full time-profile specified by the unique time values from
+    the training data.  No test-set performance values are returned.}
+  \item{y}{Test set y-values, with one entry for each row  in \code{x}.}
+  \item{M}{Fixed value for the boosting step number.  Leave this empty 
+    to determine the optimized value obtained by minimizing test-set error.}
+  \item{importance}{Calculate importance values for the x-variables?}
+  \item{proximity}{Calculate proximity of the test data to the training data?}
+  \item{verbose}{Should verbose output be printed?}
+  \item{eps}{Tolerance value used for determing the optimal \code{M}.
+    For experts only.}
   \item{...}{Further arguments passed to or from other methods.}
 }
 \details{
-  Predicted values are obtained by dropping test data down the grow
-  forest (the forest grown using the training data).  The overall error
-  rate and VIMP are also returned if the test data contains y-outcome
-  values.  Single as well as joint VIMP measures can be requested.  Note
-  that calculating VIMP can be computationally expensive (especially
-  when the dimension is high), thus if VIMP is not needed, computational
-  times can be significantly improved by setting
-  \option{importance="none"} which turns VIMP off.
-
-  Setting \option{na.action="na.impute"} imputes missing
-  test data (x-variables and/or y-outcomes).  Imputation uses the
-  grow-forest such that only training data is used when imputing test
-  data to avoid biasing error rates and VIMP (Ishwaran et al. 2008).
-  The \option{na.action="na.random"} implements a cruder, but faster
-  missing data algorithm.  See the \command{rfsrc} help file for
-  details.
-
-  If no test data is provided, then the original training data is used
-  and the code reverts to restore mode allowing the user to restore the
-  original grow forest.  This is useful because it gives the user the
-  ability to extract outputs from the forest that were not asked for in
-  the original grow call.  See the examples below for illustration.
-
-  If \option{outcome="test"}, the predictor is calculated by using
-  y-outcomes from the test data (outcome information must be present).
-  In this case, the terminal nodes from the grow-forest are recalculated
-  using the y-outcomes from the test set.  This yields a modified
-  predictor in which the topology of the forest is based solely on the
-  training data, but where the predicted value is based on the test
-  data.  Error rates and VIMP are calculated by bootstrapping the test
-  data and using out-of-bagging to ensure unbiased estimates.  See the
-  examples for illustration.
+  The predicted time profile and performance values are obtained for
+  test data from the boosted object grown on the training data.
 }
 \value{
-     An object of class \code{(rfsrc, predict)}, which is a list with the
+     An object of class \code{(boostmtree, predict)}, which is a list with the
      following components:
-     \item{call}{The original grow call to \command{rfsrc}.}
-     \item{family}{The family used in the analysis.}
-     \item{n}{Sample size of test data (depends upon \code{NA} values).}
-     \item{ntree}{Number of trees in the grow forest.}
-     \item{yvar}{Test set y-outcomes or original grow y-outcomes if none.}
-     \item{yvar.names}{A character vector of the y-outcome names.}
-     \item{xvar}{Data frame of test set x-variables.}
-     \item{xvar.names}{A character vector of the x-variable names.}
-     \item{leaf.count}{Number of terminal nodes for each tree in the
-       grow forest.  Vector of length \code{ntree}.}
-     \item{proximity}{Symmetric proximity matrix of the test data.}
-     \item{forest}{The grow forest.}
-     \item{membership}{Matrix recording terminal node membership for the
-       test data where each column contains the node number that a
-       case falls in for that tree.}
-     \item{inbag}{Matrix recording inbag membership for the test data
-       where each column contains the number of times that a case
-       appears in the bootstrap sample for that tree.}
-     \item{var.used}{Count of the number of times a variable was used in
-       growing the forest.}
-     \item{imputed.indv}{Vector of indices of records in test data with
-         missing values.}
-     \item{imputed.data}{Data frame comprising imputed test data.  First
-       columns are the y-outcomes.}
-     \item{split.depth}{Matrix [i][j] or array [i][j][k] recording the
-     minimal depth for variable [j] for case [i], either averaged over
-     the forest, or by tree [k].}
-     \item{err.rate}{Cumulative OOB error rate for the test data if
-       y-outcomes are present.}
-     \item{importance}{Test set variable importance (VIMP).  Can be
-       \code{NULL}.}
-     \item{predicted}{Test set predicted value.}
-     \item{predicted.oob}{OOB predicted value (\code{NULL} unless
-       \option{outcome="test"}).}\cr
-
-\item{...... class}{for classification settings, additionally the following ......} \cr
-      \item{class}{In-bag predicted class labels.}
-      \item{class.oob}{OOB predicted class labels (\code{NULL} unless \option{outcome="test"}).}\cr
-
-\item{...... surv}{for survival settings, additionally the following ......} \cr
-
-     \item{chf}{Cumulative hazard function (CHF).}
-     \item{chf.oob}{OOB CHF (\code{NULL} unless \option{outcome="test"}).}
-     \item{survival}{Survival function.}
-     \item{survival.oob}{OOB survival function (\code{NULL} unless \option{outcome="test"}).}
-     \item{time.interest}{Ordered unique death times.}
-     \item{ndead}{Number of deaths.}\cr
-
-\item{...... surv-CR}{for competing risks, additionally the following ......} \cr
-
-     \item{chf}{Cause-specific cumulative hazard function (CSCHF)
-     for each event.}
-     \item{chf.oob}{OOB CSCHF for each event (\code{NULL} unless \option{outcome="test"}).}
-     \item{cif}{Cumulative incidence function (CIF) for each event.}
-     \item{cif.oob}{OOB CIF for each event (\code{NULL} unless \option{outcome="test"}).}
-     \item{time.interest}{Ordered unique event times.}
-     \item{ndead}{Number of events.}
-}
-\note{
-  The dimensions and values of returned objects depend heavily on the
-  underlying family and whether y-outcomes are present in the test data.
-  In particular, items related to performance will be \code{NULL} when
-  y-outcomes are not present.
-
-  For detailed definitions of returned values (such as \code{predicted})
-  see the \command{rfsrc} help file.
+     \item{obj}{The original boosting object.}
+     \item{x}{The test x-values, but with only one row per individual
+       (i.e. duplicated rows are removed).}
+     \item{time}{List with each component containing the time
+       points for a given test individual.}
+     \item{time.unq}{Vector of the unique time points.}
+     \item{y}{List containing the test y-values.}
+     \item{beta}{Estimated beta coefficients at the optimized
+       \code{M}.}
+     \item{mu}{Estimated mean profile at the optimized \code{M}.}
+     \item{err.rate}{Test set l1 and l2 (mean-squared error, mse) values.}
+     \item{mse}{Test set mean-squared value at the optimized \code{M}.}
+     \item{vimp}{Variable importance values.}
+     \item{proximity}{Proximity matrix.}
+     \item{Mopt}{The optimized \code{M}.}
 }
 \author{
     Hemant Ishwaran and Udaya B. Kogalur
 }
 \references{
-  Breiman L. (2001). Random forests, \emph{Machine Learning}, 45:5-32.
-
-  Ishwaran H., Kogalur U.B., Blackstone E.H. and Lauer M.S.
-  (2008).  Random survival forests, \emph{Ann. App.
-    Statist.}, 2:841-860.
-
-  Ishwaran H. and Kogalur U.B. (2007).  Random survival forests for R,
-  \emph{Rnews}, 7(2):25-31.
+  Ishwaran et al. (2014).  Boosting multivariate trees for
+  longitudinal data.
 }
 \seealso{
-  \command{\link{plot.competing.risk}},
-  \command{\link{plot.rfsrc}},
-  \command{\link{plot.survival}},
-  \command{\link{plot.variable}},
-  \command{\link{vimp}}
+  \command{\link{plot.boostmtree}},
+  \command{\link{print.boostmtree}}
 }
 \examples{
+\donttest{
+##------------------------------------------------------------
+## Synthetic example
+##
+##  high correlation, quadratic time with quadratic interaction
+##  noisy variables
+##
+##  calculate test set error under adaptive rho and mispecified rho
+##  compare to GLS (generalized least-squares)
+##----------------------------------------------------------------------------
+M <- 250
+n <- 100
+ntest <- 100
+N <- 5
+rho <- .80
+phi <- 1
+p <- 5
+dta <- data.frame(do.call("rbind", lapply(1:(n+ntest), function(i) {
+  Ni <- round(runif(1, 1, 3 * N))
+  corr.mat <- matrix(rho, nrow=Ni, ncol=Ni)
+  diag(corr.mat) <- 1
+  eps <- sqrt(phi) * t(chol(corr.mat)) \%*\% rnorm(Ni)
+  x1 <- rnorm(1)
+  x2 <- runif(1, 2, 3)
+  xnoise <- rnorm(p - 2)
+  x <- c(x1, x2, xnoise)
+  tm <- sample((1:(3 * N))/N, size = Ni, replace = TRUE)
+  y <- 1.5 + 2.5 * x1 - .65 * (tm ^ 2) * (x2 ^ 2)  + eps
+  cbind(matrix(x, nrow = Ni, ncol = length(x), byrow = TRUE),
+        tm, rep(i, Ni), y)
+})))
+colnames(dta) <- c(paste("x", 1:p, sep = ""), "time", "id", "y")
+trn <- c(1:sum(dta$id <= n))
 
+##adaptive rho
+boost.grow.1 <- boostmtree(dta[trn, 1:p], dta[trn, p+1], dta[trn, p+2], dta[trn, p+3],
+             M = M, lambda = 1000)
+boost.pred.1 <- predict(boost.grow.1,
+             dta[-trn, 1:p], dta[-trn, p+1], dta[-trn, p+2], dta[-trn, p+3])
+
+##fixed rho = 0
+boost.grow.2 <- boostmtree(dta[trn, 1:p], dta[trn, p+1], dta[trn, p+2], dta[trn, p+3], 
+             rho = 0, M = M, lambda = 1000)
+boost.pred.2 <- predict(boost.grow.2,
+             dta[-trn, 1:p], dta[-trn, p+1], dta[-trn, p+2], dta[-trn, p+3])
+
+##mse values
+cat("true model        :", boostmtree:::gls.mse("y~x1+I(x2^2)*I(time^2)",dta,trn),"\n")
+cat("linear GLS        :", boostmtree:::gls.mse("y~x1+x2+x1*time+x2*time",dta,trn),"\n")
+cat("boostmtree        :", boost.pred.1$mse,"\n")
+cat("boostmtree (rho=0):", boost.pred.2$mse,"\n")
+
+##predicted value plot
+plot(boost.pred.1)
+}
 }
 \keyword{predict}
-\keyword{forest}
+\keyword{boosting}
 

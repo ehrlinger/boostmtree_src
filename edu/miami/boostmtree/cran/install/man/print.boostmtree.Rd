@@ -1,13 +1,12 @@
 \name{print.boostmtree}
 \alias{print.boostmtree}
-\title{Print Summary Output of a RF-SRC Analysis}
+\title{Print Summary Output}
 \description{
-    Print summary output from a RF-SRC analysis. This is the default
-    print method for the package.
+    Print summary output from the boosting analysis.
 }
 \usage{\method{print}{boostmtree}(x, ...)}
 \arguments{
-    \item{x}{An object of class \code{(rfsrc, grow)} or \code{(rfsrc,
+    \item{x}{An object of class \code{(boostmtree, grow)} or \code{(boostmtree,
 	predict)}.}
     \item{...}{Further arguments passed to or from other methods.}
 }
@@ -15,12 +14,7 @@
     Hemant Ishwaran and Udaya B. Kogalur
 }
 \references{
-    Ishwaran H. and Kogalur U.B. (2007).  Random survival forests for R,
-    \emph{Rnews}, 7/2:25-31.
-}
-\seealso{
-  \command{\link{predict.rfsrc}}
-}
-\examples{
+  Ishwaran et al. (2014).  Boosting multivariate trees for
+  longitudinal data.
 }
 \keyword{print}

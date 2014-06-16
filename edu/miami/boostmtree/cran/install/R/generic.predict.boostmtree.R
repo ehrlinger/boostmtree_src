@@ -66,7 +66,7 @@ generic.predict.boostmtree <- function(object,
       testFlag <- FALSE
     }
     else {
-      ## if x is provided but not other quantities
+      ## if x is provided but no other values
       ## we assume id's are 1:1 and swap in the original unique time values
       ## no y is assumed
       if (!missing(x) && (missing(id) || missing(tm))) {
@@ -160,6 +160,7 @@ generic.predict.boostmtree <- function(object,
 
   ## objects needed for updating beta
   Ymean <- object$ymean
+  Ysd <- object$ysd
   gamma <- object$gamma
   baselearner <- object$baselearner
 
@@ -273,13 +274,14 @@ generic.predict.boostmtree <- function(object,
       ## pass the x-data down the mth tree
       ## acquire terminal node membership (tnm)
       ## update beta using gamma making use of tnm
+      ## rescale by Ysd and add Ymean
       ##---------------------------------------------------------
 
       orgMembership <- gamma[[m]][, 1]
-      beta <- t(t(gamma[[m]][match(membership[[m]], orgMembership), -1, drop = FALSE]) * nu.vec)
+      beta <- t(t(gamma[[m]][match(membership[[m]], orgMembership), -1, drop = FALSE]) * nu.vec) * Ysd
 
       if (m == 1) {
-        beta[, 1] <- beta[, 1] + Ymean##add the overall mean
+        beta[, 1] <- beta[, 1] + Ymean
         beta.list[[m]] <- beta
       }
       else {
@@ -294,10 +296,10 @@ generic.predict.boostmtree <- function(object,
 
         beta.vimp[[m]] <- lapply(1:p, function(k) {
           membership.k <- membershipNoise[[m]][((k-1) * n + 1):(k * n)]
-          beta.update.k <- t(t(gamma[[m]][match(membership.k, orgMembership), -1, drop = FALSE]) * nu.vec)
+          beta.update.k <- t(t(gamma[[m]][match(membership.k, orgMembership), -1, drop = FALSE]) * nu.vec) * Ysd
           if (m == 1) {
             beta.m <- beta.update.k
-            beta.m[, 1] <- beta.m[, 1] + Ymean##add overall mean
+            beta.m[, 1] <- beta.m[, 1] + Ymean##add the overall mean
             beta.m
           }
           else {
@@ -309,6 +311,7 @@ generic.predict.boostmtree <- function(object,
 
     }##loop is complete
 
+    
   }
 
   ##############################################################################
@@ -329,10 +332,12 @@ generic.predict.boostmtree <- function(object,
 
   muhat <- mclapply(1:M, function(m) {
     ## extract those mu values corresponding to the observed time points
+    ## we allow replicated time measurements for an individual
+    ## therefore the match of tm to tm.unq is delicate
     DbetaT.m <- D %*% t(beta.list[[m]])
-    c(lapply(1:n, function(i) {
-      DbetaT.m[, i][is.element(tm.unq, tm[[i]])]
-    }))
+    lapply(1:n, function(i) {
+      DbetaT.m[, i][match(tm[[i]], tm.unq, tm[[i]])]
+    })
   })
 
   if (testFlag) {
@@ -372,8 +377,11 @@ generic.predict.boostmtree <- function(object,
     vimp <- rep(0, p)
     vimp <- unlist(mclapply(1:p, function(k) {
       DbetaT.k <- D %*% t(beta.vimp[[Mopt]][[k]])
+      ## extract those mu values corresponding to the observed time points
+      ## we allow replicated time measurements for an individual
+      ## therefore the match of tm to tm.unq is delicate
       muhat.k <- lapply(1:n, function(i) {
-        DbetaT.k[, i][is.element(tm.unq, tm[[i]])]
+        DbetaT.k[, i][match(tm[[i]], tm.unq, tm[[i]])]
       })
       l2Dist(Y, muhat.k) - err.rate[Mopt, "l2"]
     }))
@@ -391,8 +399,9 @@ generic.predict.boostmtree <- function(object,
        time.unq = tm.unq,
        y = if (testFlag) Y else NULL,
        beta = beta.list[[Mopt]],
-       muhat = muhat[[Mopt]],
+       mu = muhat[[Mopt]],
        err.rate = err.rate,
+       mse = err.rate[Mopt, "l2"],
        vimp = vimp,
        proximity = prox,
        Mopt = if (testFlag) Mopt else NULL)

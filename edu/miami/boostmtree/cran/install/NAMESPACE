@@ -1,9 +1,7 @@
 import(randomForestSRCM)
 import(parallel)
-import(Matrix)
-import(splines)
-import(nlme)
-import(lme4)
+importFrom(splines, bs)
+importFrom(nlme, gls, corCompSymm)
 
 export(boostmtree,
        predict.boostmtree,

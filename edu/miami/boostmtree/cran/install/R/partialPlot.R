@@ -41,7 +41,6 @@ partialPlot <- function (obj,
   if (!missing(subset)) {
     obj$x <- obj$x[subset,, drop = FALSE]
   }
-    
 
   ## iterate over the variables, obtained the partial plot values for the desired time points
   p.obj <- lapply(xvar.names, function(nm) {
@@ -51,8 +50,8 @@ partialPlot <- function (obj,
     newx <- obj$x
     rObj <- t(sapply(x.unq, function(xu) {
       newx[, nm] <- rep(xu, nrow(newx))
-      muhat <- predict(obj, x = newx, tm = tmOrg, partial = TRUE)$muhat
-      mn.x <- colMeans(do.call(rbind, lapply(muhat, function(mm) {mm[tm.pt]})))
+      mu <- predict(obj, x = newx, tm = tmOrg, partial = TRUE)$mu
+      mn.x <- colMeans(do.call(rbind, lapply(mu, function(mm) {mm[tm.pt]})))
       c(xu, mn.x)
     }))
     colnames(rObj) <- c("x", paste("y.", 1:length(tm.pt)))

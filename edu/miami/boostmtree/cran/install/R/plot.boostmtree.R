@@ -39,15 +39,15 @@ plot.boostmtree <- function (x, ...)
     }
     
     ## rho/phi/lambda against M
-    plot(1:M, x$rho, ylim = range(lowess(1:M, x$rho)$y),
+    plot(1:M, x$rho, ylim = range(lowess.mod(1:M, x$rho)$y),
          xlab = "iterations", ylab = expression(rho), type = "n")
-    lines(lowess(1:M, x$rho, f = 5/10))
-    plot(1:M, x$phi, ylim = range(lowess(1:M, x$phi)$y),
+    lines(lowess.mod(1:M, x$rho, f = 5/10))
+    plot(1:M, x$phi, ylim = range(lowess.mod(1:M, x$phi)$y),
          xlab = "iterations", ylab = expression(phi), type = "n")
-    lines(lowess(1:M, x$phi, f = 5/10))
-    plot(1:M, x$lambda, ylim = range(lowess(1:M, x$lambda)$y),
+    lines(lowess.mod(1:M, x$phi, f = 5/10))
+    plot(1:M, x$lambda, ylim = range(lowess.mod(1:M, x$lambda)$y),
          xlab = "iterations", ylab = expression(lambda), type = "n")
-    lines(lowess(1:M, x$lambda, f = 5/10))
+    lines(lowess.mod(1:M, x$lambda, f = 5/10))
 
     
   }
@@ -60,9 +60,9 @@ plot.boostmtree <- function (x, ...)
     if (is.null(x$err.rate)) {
 
       ## predicted value versus time
-      plot(unlist(x$time), unlist(x$muhat), xlab = "time", ylab = "predicted", type = "n")
-      for (i in 1:length(x$muhat)) {
-        lines(x$time[[i]], x$muhat[[i]], col = "gray", lty = 2)
+      plot(unlist(x$time), unlist(x$mu), xlab = "time", ylab = "predicted", type = "n")
+      for (i in 1:length(x$mu)) {
+        lines(x$time[[i]], x$mu[[i]], col = "gray", lty = 2)
       }
       
     }
@@ -89,23 +89,23 @@ plot.boostmtree <- function (x, ...)
       barplot(vimp, las = 2, ylab = "vimp (%)", cex.names = 1.0)
 
       ## predicted value versus time
-      plot(unlist(x$time), unlist(x$muhat), xlab = "time", ylab = "predicted", type = "n")
-      for (i in 1:length(x$muhat)) {
-        lines(x$time[[i]], x$muhat[[i]], col = "gray", lty = 2)
+      plot(unlist(x$time), unlist(x$mu), xlab = "time", ylab = "predicted", type = "n")
+      for (i in 1:length(x$mu)) {
+        lines(x$time[[i]], x$mu[[i]], col = "gray", lty = 2)
       }
 
       ## rho/phi/lambda against M
-      plot(1:M, x$boost.obj$rho, ylim = range(lowess(1:M, x$boost.obj$rho)$y), 
+      plot(1:M, x$boost.obj$rho, ylim = range(lowess.mod(1:M, x$boost.obj$rho)$y), 
            xlab = "iterations", ylab = expression(rho), type = "n")
-      lines(lowess(1:M, x$boost.obj$rho, f = 5/10))
+      lines(lowess.mod(1:M, x$boost.obj$rho, f = 5/10))
       abline(v=Mopt, lty = 2, col = 2, lwd = 2)
-      plot(1:M, x$boost.obj$phi, ylim = range(lowess(1:M, x$boost.obj$phi)$y), 
+      plot(1:M, x$boost.obj$phi, ylim = range(lowess.mod(1:M, x$boost.obj$phi)$y), 
            xlab = "iterations", ylab = expression(phi), type = "n")
-      lines(lowess(1:M, x$boost.obj$phi, f = 5/10))
+      lines(lowess.mod(1:M, x$boost.obj$phi, f = 5/10))
       abline(v=Mopt, lty = 2, col = 2, lwd = 2)
-      plot(1:M, x$boost.obj$lambda, ylim = range(lowess(1:M, x$boost.obj$lambda)$y),
+      plot(1:M, x$boost.obj$lambda, ylim = range(lowess.mod(1:M, x$boost.obj$lambda)$y),
            xlab = "iterations", ylab = expression(lambda), type = "n")
-      lines(lowess(1:M, x$boost.obj$lambda, f = 5/10))
+      lines(lowess.mod(1:M, x$boost.obj$lambda, f = 5/10))
       abline(v=Mopt, lty = 2, col = 2, lwd = 2)
 
       
