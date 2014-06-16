@@ -49,7 +49,7 @@ git pull boostmree master
 
 # user name and password access
 
-UserID:           kogalur
+UserID:       kogalur
 Password:     MW4euZE8nP%Ndx
 
 ------------------------------------------------------------------------
