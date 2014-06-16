@@ -91,53 +91,49 @@ gls.mse  <- function(f, dta, trn) {
 ## hidden bootstrap value
 is.hidden.bootstrap <-  function (user.option) {
 
-  index = match("bootstrap", names(user.option), 0)
-
-  if (index == 0) {
+  if (is.null(user.option$bootstrap)) {
     "by.root"
   }
   else {
-    as.character(eval.parent(user.option$bootstrap))
+    as.character(user.option$bootstrap)
   }
+
 }
 
 ## hidden ntree value
 is.hidden.ntree <-  function (user.option) {
 
-  index = match("ntree", names(user.option), 0)
-
-  if (index == 0) {
+  if (is.null(user.option$ntree)) {
     1
   }
   else {
-    max(1, eval.parent(user.option$ntree))
+    max(1, user.option$ntree)
   }
+
 }
 
 ## hidden partial plot value
 is.hidden.partial <-  function (user.option) {
 
-  index = match("partial", names(user.option), 0)
-
-  if (index == 0) {
+  if (is.null(user.option$partial)) {
     FALSE
   }
   else {
     TRUE
   }
+
 }
 
 ## hidden rho value
 is.hidden.rho <-  function (user.option) {
 
-  index = match("rho", names(user.option), 0)
-
-  if (index == 0) {
+  if (is.null(user.option$rho)) {
     TRUE
   }
   else {
-    eval.parent(user.option$rho)
+    user.option$rho
   }
+  
 }
 
 

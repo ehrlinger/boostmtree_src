@@ -58,6 +58,7 @@ boostmtree <- function(x,
   ## data is sorted on the id
   ##------------------------------------------------------
 
+  user.option <- list(...)
   id.unq <- sort(unique(id))
   n <- length(id.unq)
   x <- as.data.frame(x)
@@ -74,7 +75,7 @@ boostmtree <- function(x,
   Y <- lapply(1:n, function(i) {(y[id == id.unq[i]] - Ymean) / Ysd})
   ni <- unlist(lapply(1:n, function(i) {sum(id == id.unq[i])}))
   id <- sort(id)
-  user.option <- match.call(expand.dots = TRUE)
+  
 
   ##------------------------------------------------------
   ## define the Di matrix

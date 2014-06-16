@@ -36,6 +36,21 @@ git remote -v
 # Pulling from the trunk:
 git pull boostmree master
 
+# Cloning a repository:
+
+> cd ~/boosmtree/cloud (or where ever you want it)
+
+> git clone https://github.com/kogalur/boostmtree/
+
+#You will also want to make a user friendly name for each cloned directory, since that is all local:
+
+# User friendly name for remote:
+> git remote add boostmtree https://github.com/kogalur/boostmtree/
+
+# user name and password access
+
+UserID:           kogalur
+Password:     MW4euZE8nP%Ndx
 
 ------------------------------------------------------------------------
 ------------------------------------------------------------------------
