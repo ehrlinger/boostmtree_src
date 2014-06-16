@@ -11,7 +11,7 @@
   <property name="project.version.token" value="_PROJECT_VERSION_ID_"/>
   <property name="project.version" value="0.0.1"/>
   <property name="project.build.token" value="_PROJECT_BUILD_ID_"/>
-  <property name="project.build" value="bld20140605"/>
+  <property name="project.build" value="bld20140616"/>
   <property name="project.pkg.name.token" value="_PROJECT_PACKAGE_NAME_"/>
 
   <property name="http.prefix.token" value="_HTTP_PREFIX_"/>

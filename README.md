@@ -47,17 +47,18 @@ git pull boostmree master
 TAG             INIT    DESCRIPTION
 ------------------------------------------------------------------------
 ------------------------------------------------------------------------
-bld20140615     hi      Compiled man pages with illustrative examples.
+bld20140616     hi      Compiled man pages with illustrative examples.
                         Upgraded boostmtree code.  Y-values are scaled.
-                        Adpative smoothing improved by using the fixed
+                        Added forest base-learners (TBD predict mode).
+                        Adaptive smoothing improved by using the fixed
                         lambda gamma update in place of BLUP.  Resolved
                         long standing issues with phi and rho by noting
                         phi is a nuisance parameter. Removed the M
                         burn-in option.  Added hidden variables ntree,
                         bootstrap and rho.  Added several new functions 
-                        to utilities.  Predict code upgraded to accomodate 
-                        scaling of Y.  Replaced benchmark test code with 
-			improved examples. 
+                        to utilities including hidden variable parsing.  
+                        Predict code upgraded to accomodate scaling of Y.  
+                        Replaced benchmark test code with improved examples. 
 
 ------------------------------------------------------------------------
 TRUNK TAGS

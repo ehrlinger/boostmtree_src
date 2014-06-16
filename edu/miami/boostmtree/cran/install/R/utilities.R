@@ -97,7 +97,7 @@ is.hidden.bootstrap <-  function (user.option) {
     "by.root"
   }
   else {
-    as.character(user.option[index])
+    as.character(eval.parent(user.option$bootstrap))
   }
 }
 
@@ -110,7 +110,7 @@ is.hidden.ntree <-  function (user.option) {
     1
   }
   else {
-    max(1, as.integer(as.character(user.option[index])))
+    max(1, eval.parent(user.option$ntree))
   }
 }
 
@@ -136,7 +136,7 @@ is.hidden.rho <-  function (user.option) {
     TRUE
   }
   else {
-    as.numeric(as.character(user.option[index]))
+    eval.parent(user.option$rho)
   }
 }
 
