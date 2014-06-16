@@ -1,30 +1,28 @@
 boostmtree
 ========================================================================
 
-# Create a directory for your project called "boostmtree"
-# in your user directory
 
-> mkdir ~/working
-> cd ~/working
+If you've added new files:
 
-# Set up and initialize the necessary Git files in ~/working/.git
-> git init
-
-# Cloning the repository in the cloud to your local machine.
-> git clone https://github.com/kogalur/boostmtree/
-
-# Move to the source tree "home" directory
-> cd boostmtree/edu/miami/boostmtree
-
-# Adding files
 > git add cran/install/R/new.file.R
 
-# Commiting files
+Finally, when you're ready to post the build, you first commit:
+
 > git commit -am "."
 
-# Tagging:
-> git tag -a bld2014xxxx
+This tells the cloud what you intend to push.  Then tagging, so we remember the snapshot:
+
+> git tag -am "."  bld2014xxxx
+
+Or, if you need to move a tag or retag
+
 > git tag -f -am "." bld2014xxxx
+
+
+Then, finally we push up to the cloud:
+
+> git push boostmtree
+
 
 # Viewing remote aliases:
 git remote -v
@@ -34,9 +32,6 @@ git remote add boostmtree https://github.com/kogalur/boostmtree/
 
 # Viewing remote aliases after you have added the above:
 git remote -v
-
-# Pushing to the cloud:
-git push boostmtree
 
 # Pulling from the trunk:
 git pull boostmree master
