@@ -2,40 +2,6 @@ boostmtree
 ========================================================================
 
 
-If you've added new files:
-
-> git add cran/install/R/new.file.R
-
-Finally, when you're ready to post the build, you first commit:
-
-> git commit -am "."
-
-This tells the cloud what you intend to push.  Then tagging, so we remember the snapshot:
-
-> git tag -am "."  bld2014xxxx
-
-Or, if you need to move a tag or retag
-
-> git tag -f -am "." bld2014xxxx
-
-
-Then, finally we push up to the cloud:
-
-> git push boostmtree
-
-
-# Viewing remote aliases:
-git remote -v
-
-# User friendly name for remote:
-git remote add boostmtree https://github.com/kogalur/boostmtree/
-
-# Viewing remote aliases after you have added the above:
-git remote -v
-
-# Pulling from the trunk:
-git pull boostmree master
-
 # Cloning a repository:
 
 > cd ~/boosmtree/cloud (or where ever you want it)
@@ -48,9 +14,67 @@ git pull boostmree master
 > git remote add boostmtree https://github.com/kogalur/boostmtree/
 
 # user name and password access
-
 UserID:       kogalur
 Password:     MW4euZE8nP%Ndx
+
+
+If you've added new files:
+> git add cran/install/R/new.file.R
+
+Finally, when you're ready to post the build, you must first commit.
+This tells the cloud what you intend to push, but does not actually
+push it to the cloud.  The dot is just the associated message, but we
+have been relying on the README file for more annotated information:
+> git commit -am "."
+
+Then, we push the changes up to the cloud:
+> git push boostmtree
+
+Then we want to tag the build so we remember the snapshot:
+> git tag -a bld2014xxxx -m '.'
+
+The dot is just the associated message, but we have been relying on the README
+file for more annotated information.
+> git tag -a bld2014xxxx -m "."
+
+Or, if you need to move a tag or retag after minor corrections:
+> git tag -f -a bld2014xxxx -m "."
+
+Then you have to push the tag to the cloud:
+> git push boostmtree bld2014xxxx
+
+To view all tags
+> git tag
+
+To review the details of a tag
+> git show bld2014xxxx
+
+
+
+# Pulling from the trunk:
+> git pull boostmree master
+
+
+## NICETIES:
+
+# Viewing remote aliases:
+> git remote -v
+
+# User friendly name for remote:
+> git remote add boostmtree https://github.com/kogalur/boostmtree/
+
+# Check that your alias is in effect:
+> git remote -v
+
+# Viewing changes:
+> git log --stat --summary
+
+gives a summary of changes of all commits.
+
+> git log -p
+
+shows the diffs at each commit.
+
 
 ------------------------------------------------------------------------
 ------------------------------------------------------------------------
