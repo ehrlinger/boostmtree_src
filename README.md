@@ -1,6 +1,12 @@
 boostmtree
 ========================================================================
 
+# The current state of your session:
+> git config --list
+
+# If git doesn't know who you are:
+> git config --global user.email "commerce@kogalur.com"
+> git config --global user.name "kogalur"
 
 # Cloning a repository:
 
@@ -81,6 +87,8 @@ shows the diffs at each commit.
 TAG             INIT    DESCRIPTION
 ------------------------------------------------------------------------
 ------------------------------------------------------------------------
+bld20140711     ubk     Revert to bld20140616
+bld20140710     hi      Bad commit by Hemant.
 bld20140616     hi      Compiled man pages with illustrative examples.
                         Upgraded boostmtree code.  Y-values are scaled.
                         Added forest base-learners (TBD predict mode).
@@ -89,10 +97,10 @@ bld20140616     hi      Compiled man pages with illustrative examples.
                         long standing issues with phi and rho by noting
                         phi is a nuisance parameter. Removed the M
                         burn-in option.  Added hidden variables ntree,
-                        bootstrap and rho.  Added several new functions 
-                        to utilities including hidden variable parsing.  
-                        Predict code upgraded to accomodate scaling of Y.  
-                        Replaced benchmark test code with improved examples. 
+                        bootstrap and rho.  Added several new functions
+                        to utilities including hidden variable parsing.
+                        Predict code upgraded to accomodate scaling of Y.
+                        Replaced benchmark test code with improved examples.
 
 ------------------------------------------------------------------------
 TRUNK TAGS
