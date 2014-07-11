@@ -87,8 +87,14 @@ shows the diffs at each commit.
 TAG             INIT    DESCRIPTION
 ------------------------------------------------------------------------
 ------------------------------------------------------------------------
+bld20140711a    ubk     Update to include changes in bld20140710.
 bld20140711     ubk     Revert to bld20140616
-bld20140710     hi      Bad commit by Hemant.
+bld20140710     hi      Bad commit by Hemant.  Added vimp for training
+                        data. Improved man pages.  Added simulation R
+                        and man pages.  Changed default options based
+                        on running simulations.  General cleaning up
+                        of R and man pages.
+
 bld20140616     hi      Compiled man pages with illustrative examples.
                         Upgraded boostmtree code.  Y-values are scaled.
                         Added forest base-learners (TBD predict mode).

@@ -20,6 +20,7 @@ print.boostmtree <- function (x, ...)
     cat("sample size                 :", nrow(x$x), "\n")
     cat("number of variables         :", ncol(x$x), "\n")
     cat("B-spline dimension          :", ncol(x$D), "\n")
+    cat("penalization order          :", ncol(x$pen.ord), "\n")
     
   }
 

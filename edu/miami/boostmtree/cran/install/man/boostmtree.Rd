@@ -3,10 +3,10 @@
 \alias{_PROJECT_PACKAGE_NAME_}
 \title{Boosted multivariate trees for longitudinal data}
 \description{
-  Implements Friedman's gradient descent boosting algorithm for
-  longitudinal data using multivariate tree base learners.  A time
-  interaction effect is modeled using B-splines and penalized B-splines
-  (P-splines) with estimated adaptive smoothing parameter.
+  Multivariate extension of Friedman's gradient descent boosting
+  method (Friedman, 2001) to longitudinal data using multivariate tree base
+  learners.  Covariate-time interactions are modeled using penalized
+  B-splines (P-splines) with estimated adaptive smoothing parameter.
 }
 \usage{
  boostmtree(x,
@@ -15,13 +15,14 @@
    y,
    M = 200,
    nu = 0.1,
-   K = 3,
+   K = 5,
    nknots = 10,
    d = 3,
-   pen.ord = 2,
+   pen.ord = 3,
    lambda,
-   lambda.max = 5e3,
+   lambda.max = 1e6,
    lambda.iter = 2,
+   importance = FALSE,
    svd.tol = 1e-6,
    forest.tol = 1e-3,
    verbose = TRUE,
@@ -53,6 +54,7 @@
     \item{lambda.iter}{Number of iterations used to estimate lambda
       (only applies when lambda is not supplied and adaptive smoothing
       is employed).}
+  \item{importance}{Calculate importance values for the x-variables?}
     \item{svd.tol}{Tolerance value used in the SVD calculation of the
       penalty matrix.  For experts only.}
     \item{forest.tol}{Tolerance used for forest weighted least squares
@@ -64,15 +66,25 @@
   Each individual has observed y-values over possibly different time
   points, and with possibly differing number of time points.  Given the
   observed y-values, the time points, and the x-value for each
-  individual, the mean value of y is estimated using gradient boosting
-  in which the gradient is derived from a criterion function involving a
-  working variance matrix for y specified as an equicorrelation matrix
-  with parameter \emph{rho} multiplied by a variance parameter
-  \emph{phi}.  Multivariate trees are used for the base learner and
-  weighted least squares are used to solve the line-search.  A
-  mixed-model formulation is used to estimate the smoothing parameter
-  associated with the B-splines used for the time-interaction effect,
-  although the user can manually set the smoothing parameter as well.
+  individual, the conditional mean time profile of y is estimated using
+  gradient boosting in which the gradient is derived from a criterion
+  function involving a working variance matrix for y specified as an
+  equicorrelation matrix with parameter \emph{rho} multiplied by a
+  variance parameter \emph{phi}.  Multivariate trees are used for the
+  base learner and weighted least squares are used to approximate the
+  matching pursuit optimization.  A mixed-model formulation is used to
+  estimate the smoothing parameter associated with the B-splines used
+  for the time-interaction effect, although the user can manually set
+  the smoothing parameter as well.
+
+  By default, trees are grown from a bootstrap sample of the data --
+  thus the boosting method employed here is actually a form of
+  stochastic gradient descent boosting (Friedman, 2002).  Stochastic
+  descent often improves performance and has the added advantage that
+  out-of-sample data (out-of-bag, OOB) can be used to calculate
+  variable importance (VIMP).  To request VIMP use the option
+  \code{importance = TRUE}.  Note that VIMP calculations can be slow,
+  especially in high dimensions.  
 }
 \value{
      An object of class \code{(boostmtree, grow)} with the following
@@ -80,6 +92,7 @@
 
      \item{x}{The x-values, but with only one row per individual
        (i.e. duplicated rows are removed). Values sorted on \code{id}.}
+     \item{xvar.names}{X-variable names.}
      \item{time}{List with each component containing the time
        points for a given individual. Values sorted on \code{id}.}
      \item{id}{Sorted subject identifier.}
@@ -101,8 +114,10 @@
      \item{membership}{List of length \emph{M}, with each component
        containing the terminal node membership for a given boosting
        iteration.}
+     \item{vimp}{Variable importance (relative RMSE).}
      \item{D}{Design matrix for time.}
      \item{d}{Degree of the piecewise B-spline polynomial.}
+     \item{pen.ord}{Penalization difference order.}
      \item{K}{Number of terminal nodes.}
      \item{M}{Number of boosting iterations.}
      \item{nu}{Boosting regularization parameter.}
@@ -114,15 +129,19 @@
 \references{
   Friedman J.H. (2001). Greedy function approximation: a gradient
   boosting machine, \emph{Ann. of Statist.}, 5:1189-1232.
+  
+  Friedman J.H. (2002). Stochastic gradient boosting.
+  \emph{Comp. Statist. Data Anal.}, 38(4):367--378.
 
   Ishwaran et al. (2014).  Boosting multivariate trees for
   longitudinal data.
 }
 \seealso{
-  \command{\link{partialPlot}}
+  \command{\link{partialPlot}},
   \command{\link{plot.boostmtree}},
   \command{\link{predict.boostmtree}},
-  \command{\link{print.boostmtree}}
+  \command{\link{print.boostmtree}},
+  \command{\link{simLong}},
 }
 \examples{
 ##------------------------------------------------------------
@@ -130,27 +149,11 @@
 ##
 ##  high correlation, quadratic time with quadratic interaction
 ##-------------------------------------------------------------
-n <- 50
-N <- 5
-rho <- .80
-phi <- 1
-dta <- data.frame(do.call("rbind", lapply(1:n, function(i) {
-  Ni <- round(runif(1, 1, 3 * N))
-  corr.mat <- matrix(rho, nrow=Ni, ncol=Ni)
-  diag(corr.mat) <- 1
-  eps <- sqrt(phi) * t(chol(corr.mat)) \%*\% rnorm(Ni)
-  x1 <- rnorm(1)
-  x2 <- runif(1, 2, 3)
-  x <- c(x1, x2)
-  tm <- sample((1:(3 * N))/N, size = Ni, replace = TRUE)
-  y <- 1.5 + 2.5 * x1 - .65 * (tm ^ 2) * (x2 ^ 2)  + eps
-  cbind(matrix(x, nrow = Ni, ncol = length(x), byrow = TRUE),
-        tm, rep(i, Ni), y)
-})))
-colnames(dta) <- c("x1", "x2", "time", "id", "y")
+#simulate the data
+dta <- simLong(n = 50, N = 5, rho =.80, model = 2)$dtaL
 
 #basic boosting call (M is set to a small value here purely for illustration)
-boost.grow <- boostmtree(dta[, 1:2], dta[, 3], dta[, 4], dta[, 5], M = 100)
+boost.grow <- boostmtree(dta$features, dta$time, dta$id, dta$y, M = 20)
 
 #print results
 print(boost.grow)
@@ -164,9 +167,9 @@ plot(boost.grow)
 ##----------------------------------------------------------------------------
 data(spirometry, package = "_PROJECT_PACKAGE_NAME_")
 
-## boosting call: B-spline with 3 degree polynomial and 15 knots
+#boosting call: cubic B-splines with 15 knots
 spr.obj <- boostmtree(spirometry$features, spirometry$time, spirometry$id, spirometry$y,
-                        M = 200, nu = .05, d = 3, nknots = 15)
+                        M = 100, nu = .025, nknots = 15)
 plot(spr.obj)
 }
 

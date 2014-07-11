@@ -1,8 +1,8 @@
 \name{partialPlot}
 \alias{partialPlot}
-\title{Partial Plot analysis}
+\title{Partial plot analysis}
 \description{
-  Partial dependence plot of x against the adjusted y.
+  Partial dependence plot of x against adjusted predicted y.
 }
 \usage{partialPlot(obj,
  xvar.names,
@@ -26,9 +26,9 @@
 }
 \details{
   Partial dependence plot (Friedman, 2001) of x values specified by
-  \code{xvar.names} against the adjusted y-values over a set of time
-  points specified by \code{tm}.  Analysis can be restricted to a subset
-  of the data using \code{subset}.
+  \code{xvar.names} against the adjusted predicted y-values over a set
+  of time points specified by \code{tm}.  Analysis can be restricted to
+  a subset of the data using \code{subset}.
 }
 \author{
   Hemant Ishwaran and Udaya B. Kogalur
@@ -44,29 +44,15 @@
 ##
 ##  high correlation, quadratic time with quadratic interaction
 ##-------------------------------------------------------------
-n <- 50
-N <- 5
-rho <- .80
-phi <- 1
-dta <- data.frame(do.call("rbind", lapply(1:n, function(i) {
-  Ni <- round(runif(1, 1, 3 * N))
-  corr.mat <- matrix(rho, nrow=Ni, ncol=Ni)
-  diag(corr.mat) <- 1
-  eps <- sqrt(phi) * t(chol(corr.mat)) \%*\% rnorm(Ni)
-  x1 <- rnorm(1)
-  x2 <- runif(1, 2, 3)
-  x <- c(x1, x2)
-  tm <- sample((1:(3 * N))/N, size = Ni, replace = TRUE)
-  y <- 1.5 + 2.5 * x1 - .65 * (tm ^ 2) * (x2 ^ 2)  + eps
-  cbind(matrix(x, nrow = Ni, ncol = length(x), byrow = TRUE),
-        tm, rep(i, Ni), y)
-})))
-colnames(dta) <- c("x1", "x2", "id", "y")
+#simulate the data
+dta <- simLong(n = 50, N = 5, rho =.80, model = 2)$dtaL
 
 #basic boosting call
-boost.grow <- boostmtree(dta[, 1:2], dta[, 3], dta[, 4], dta[, 5], M = 300)
+boost.grow <- boostmtree(dta$features, dta$time, dta$id, dta$y, M = 300)
 
 #plot results
+#x1 has a linear main effect
+#x2 is quadratic with quadratic time trend
 partialPlot(boost.grow, "x1")
 partialPlot(boost.grow, "x2")
 
@@ -75,17 +61,17 @@ partialPlot(boost.grow, "x2")
 ##----------------------------------------------------------------------------
 data(spirometry, package = "_PROJECT_PACKAGE_NAME_")
 
-## boosting call: cubic B-splines with 5 knots 
+#boosting call: cubic B-splines with 15 knots 
 spr.obj <- boostmtree(spirometry$features, spirometry$time, spirometry$id, spirometry$y,
-            M = 200, nu = .05, nknots = 5, d = 3, lambda = -1)
+            M = 300, nu = .025, nknots = 15)
 
-## partial plot of double-lung group at 5 years
+#partial plot of double-lung group at 5 years
 dltx <- partialPlot(spr.obj, "AGE", tm = 5, subset=spr.obj$x$DOUBLE==1)
 
-## partial plot of single-lung group at 5 years
+#partial plot of single-lung group at 5 years
 sltx <- partialPlot(spr.obj, "AGE", tm = 5, subset=spr.obj$x$DOUBLE==0)
 
-## combine the two plots: we use lowess smoothed values
+#combine the two plots: we use lowess smoothed values
 dltx <- dltx$l.obj[[1]]
 sltx <- sltx$l.obj[[1]]
 plot(range(c(dltx[, 1], sltx[, 1])), range(c(dltx[, -1], sltx[, -1])),

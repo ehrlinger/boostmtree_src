@@ -18,7 +18,14 @@ plot.boostmtree <- function (x, ...)
     n <- length(x$mu)
     M <- x$M
 
-    layout(rbind(c(1, 4), c(2, 5), c(3, 6)), widths = c(1, 1))
+    ## plot layout depends on availability of training vimp
+
+    if (is.null(x$vimp)) {
+      layout(rbind(c(1, 4), c(2, 5), c(3, 6)), widths = c(1, 1))
+    }
+    else {
+      layout(rbind(c(1, 3), c(2, 4), c(2, 5)), widths = c(1, 1))
+    }
 
     ## predicted mu versus time
     plot(unlist(x$time), unlist(x$mu), xlab = "time", ylab = "predicted", type = "n")
@@ -26,16 +33,23 @@ plot.boostmtree <- function (x, ...)
       lines(x$time[[i]], x$mu[[i]], col = "gray", lty = 2)
     }
 
-    ## residual versus time
-    plot(unlist(x$time), unlist(x$y) - unlist(x$mu), xlab = "time", ylab = "residual", type = "n")
-    for (i in 1:n) {
-      lines(x$time[[i]], x$y[[i]] - x$mu[[i]], col = "gray", lty = 2)
+    if (is.null(x$vimp)) {
+      ## residual versus time
+      plot(unlist(x$time), unlist(x$y) - unlist(x$mu), xlab = "time", ylab = "residual", type = "n")
+      for (i in 1:n) {
+        lines(x$time[[i]], x$y[[i]] - x$mu[[i]], col = "gray", lty = 2)
+      }
+      
+      ## predicted mu versus y
+      plot(unlist(x$y), unlist(x$mu), xlab = "y", ylab = "predicted", type = "n")
+      for (i in 1:n) {
+        lines(x$y[[i]], x$mu[[i]], col = "gray", lty = 2)
+      }
     }
 
-    ## predicted mu versus y
-    plot(unlist(x$y), unlist(x$mu), xlab = "y", ylab = "predicted", type = "n")
-    for (i in 1:n) {
-      lines(x$y[[i]], x$mu[[i]], col = "gray", lty = 2)
+    else {#vimp
+      vimp <- 100 * x$vimp
+      barplot(vimp, las = 2, ylab = "vimp (%)", cex.names = 1.0)
     }
     
     ## rho/phi/lambda against M
@@ -77,11 +91,9 @@ plot.boostmtree <- function (x, ...)
 
       ## is vimp available?
       if (!is.null(x$vimp)) {
-        vimp <- TRUE
         layout(rbind(c(1, 3), c(1, 4), c(2, 5), c(2, 6)), widths = c(1, 1))
       }
       else {
-        vimp <- FALSE
         layout(rbind(c(1, 2), c(1, 3), c(1, 4), c(1, 5)), widths = c(1, 1))
       }
 
@@ -94,7 +106,7 @@ plot.boostmtree <- function (x, ...)
       abline(v=Mopt, lty = 2, col = 2, lwd = 2)
       
       ## barplot of vimp
-      if (vimp) {
+      if (!is.null(x$vimp)) {
         vimp <- 100 * (x$vimp / x$err.rate[Mopt, "l2"])
         barplot(vimp, las = 2, ylab = "vimp (%)", cex.names = 1.0)
       }

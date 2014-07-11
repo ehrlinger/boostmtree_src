@@ -1,13 +1,14 @@
 import(randomForestSRCM)
 import(parallel)
 importFrom(splines, bs)
-importFrom(nlme, gls, corCompSymm)
+importFrom(nlme, gls, corSymm, corCompSymm, corAR1)
 
 export(boostmtree,
        predict.boostmtree,
        plot.boostmtree,
        print.boostmtree,
-       partialPlot)
+       partialPlot,
+       simLong)
 
 S3method(print, boostmtree)
 S3method(plot, boostmtree)

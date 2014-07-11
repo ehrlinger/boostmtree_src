@@ -54,7 +54,7 @@ partialPlot <- function (obj,
       mn.x <- colMeans(do.call(rbind, lapply(mu, function(mm) {mm[tm.pt]})))
       c(xu, mn.x)
     }))
-    colnames(rObj) <- c("x", paste("y.", 1:length(tm.pt)))
+    colnames(rObj) <- c("x", paste("y.", 1:length(tm.pt), sep = ""))
     rObj
   })
   names(p.obj) <- xvar.names
@@ -66,7 +66,7 @@ partialPlot <- function (obj,
     y <- apply(pp[, -1, drop = FALSE], 2, function(yy) {
       lowess(x, yy)$y})
     rObj <- cbind(x, y)
-    colnames(rObj) <- c("x", paste("y.", 1:length(tm.pt)))
+    colnames(rObj) <- c("x", paste("y.", 1:length(tm.pt), sep = ""))
     rObj
   })
   names(l.obj) <- xvar.names

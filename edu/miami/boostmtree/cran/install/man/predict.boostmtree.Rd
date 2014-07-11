@@ -55,11 +55,14 @@
        points for a given test individual.}
      \item{time.unq}{Vector of the unique time points.}
      \item{y}{List containing the test y-values.}
-     \item{beta}{Estimated beta coefficients at the optimized
-       \code{M}.}
+     \item{beta}{Estimated beta coefficients at the optimized \code{M}.}
      \item{mu}{Estimated mean profile at the optimized \code{M}.}
-     \item{err.rate}{Test set l1 and l2 (mean-squared error, mse) values.}
-     \item{mse}{Test set mean-squared value at the optimized \code{M}.}
+     \item{muhat}{Extrapolated mean profile to all unique time points
+       evaluated at the the optimized \code{M}.}
+     \item{phi}{Variance parameter at the optimized \code{M}.}
+     \item{rho}{Correlation parameter at the optimized \code{M}.}
+     \item{err.rate}{Test set l1-error and RMSE.}
+     \item{mse}{Test set RMSE at the optimized \code{M}.}
      \item{vimp}{Variable importance values.}
      \item{proximity}{Proximity matrix.}
      \item{Mopt}{The optimized \code{M}.}
@@ -86,50 +89,42 @@
 ##  calculate test set error under adaptive rho and mispecified rho
 ##  compare to GLS (generalized least-squares)
 ##----------------------------------------------------------------------------
-M <- 250
-n <- 100
-ntest <- 100
-N <- 5
-rho <- .80
-phi <- 1
-p <- 5
-dta <- data.frame(do.call("rbind", lapply(1:(n+ntest), function(i) {
-  Ni <- round(runif(1, 1, 3 * N))
-  corr.mat <- matrix(rho, nrow=Ni, ncol=Ni)
-  diag(corr.mat) <- 1
-  eps <- sqrt(phi) * t(chol(corr.mat)) \%*\% rnorm(Ni)
-  x1 <- rnorm(1)
-  x2 <- runif(1, 2, 3)
-  xnoise <- rnorm(p - 2)
-  x <- c(x1, x2, xnoise)
-  tm <- sample((1:(3 * N))/N, size = Ni, replace = TRUE)
-  y <- 1.5 + 2.5 * x1 - .65 * (tm ^ 2) * (x2 ^ 2)  + eps
-  cbind(matrix(x, nrow = Ni, ncol = length(x), byrow = TRUE),
-        tm, rep(i, Ni), y)
-})))
-colnames(dta) <- c(paste("x", 1:p, sep = ""), "time", "id", "y")
-trn <- c(1:sum(dta$id <= n))
+
+## simulate the data
+dtaO <- simLong(n = 100, ntest = 100, model = 2, q = 5)
+
+## save both the list and data frame formatted data
+dtaL <- dtaO$dtaL
+dta <- dtaO$dta
+
+## identify the training data
+trn <- dtaO$trn
+
+## save formulas for GLS analysis
+f.true <- dtaO$f.true
+f.linr <- "y~x1+x2+x3+x4+x1*time+x2*time+x3*time+x4*time"
+
 
 ##adaptive rho
-boost.grow.1 <- boostmtree(dta[trn, 1:p], dta[trn, p+1], dta[trn, p+2], dta[trn, p+3],
-             M = M, lambda = 1000)
-boost.pred.1 <- predict(boost.grow.1,
-             dta[-trn, 1:p], dta[-trn, p+1], dta[-trn, p+2], dta[-trn, p+3])
+grow.1 <- boostmtree(dtaL$features[trn, ], dtaL$time[trn], dtaL$id[trn], dtaL$y[trn],
+             M = 500)
+pred.1 <- predict(grow.1,
+   dtaL$features[-trn, ], dtaL$time[-trn], dtaL$id[-trn], dtaL$y[-trn])
 
 ##fixed rho = 0
-boost.grow.2 <- boostmtree(dta[trn, 1:p], dta[trn, p+1], dta[trn, p+2], dta[trn, p+3], 
-             rho = 0, M = M, lambda = 1000)
-boost.pred.2 <- predict(boost.grow.2,
-             dta[-trn, 1:p], dta[-trn, p+1], dta[-trn, p+2], dta[-trn, p+3])
+grow.2 <- boostmtree(dtaL$features[trn, ], dtaL$time[trn], dtaL$id[trn], dtaL$y[trn],
+             M = 500, rho = 0)
+pred.2 <- predict(grow.2,
+   dtaL$features[-trn, ], dtaL$time[-trn], dtaL$id[-trn], dtaL$y[-trn])
 
 ##mse values
-cat("true model        :", boostmtree:::gls.mse("y~x1+I(x2^2)*I(time^2)",dta,trn),"\n")
-cat("linear GLS        :", boostmtree:::gls.mse("y~x1+x2+x1*time+x2*time",dta,trn),"\n")
-cat("boostmtree        :", boost.pred.1$mse,"\n")
-cat("boostmtree (rho=0):", boost.pred.2$mse,"\n")
+cat("true model        :", boostmtree:::gls.mse(f.true,dta,trn),"\n")
+cat("linear GLS        :", boostmtree:::gls.mse(f.linr,dta,trn),"\n")
+cat("boostmtree        :", pred.1$mse,"\n")
+cat("boostmtree (rho=0):", pred.2$mse,"\n")
 
 ##predicted value plot
-plot(boost.pred.1)
+plot(pred.1)
 }
 }
 \keyword{predict}

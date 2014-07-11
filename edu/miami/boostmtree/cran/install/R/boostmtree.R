@@ -1,15 +1,4 @@
 ##------------------------------------------------------
-## load required libraries here
-##------------------------------------------------------
-
-require(parallel)
-require(Matrix)
-require(splines)
-require(nlme)
-require(lme4)
-#require(randomForestSRCM)
-
-##------------------------------------------------------
 ## main function: boostmtree
 ##
 ## x             data frame containing the x-values
@@ -37,15 +26,16 @@ boostmtree <- function(x,
                        y,
                        M = 200,
                        nu = 0.1,
-                       K = 3,
+                       K = 5,
                        nknots = 10,
                        d = 3,
-                       pen.ord = 2,
+                       pen.ord = 3,
                        lambda,
-                       lambda.max = 5e3,
+                       lambda.max = 1e6,
                        lambda.iter = 2,
+                       importance = FALSE,
                        svd.tol = 1e-6,
-                       forest.tol = 1e-3,
+                       forest.tol = 1e-3,                       
                        verbose = TRUE,
                        ...)
 {
@@ -72,6 +62,7 @@ boostmtree <- function(x,
   if (Ysd < 1e-6) {
     Ysd <- 1
   }
+  Yorg <- lapply(1:n, function(i) {y[id == id.unq[i]]})
   Y <- lapply(1:n, function(i) {(y[id == id.unq[i]] - Ymean) / Ysd})
   ni <- unlist(lapply(1:n, function(i) {sum(id == id.unq[i])}))
   id <- sort(id)
@@ -151,6 +142,13 @@ boostmtree <- function(x,
       lambda <- 0
     }
   }
+  
+  ##------------------------------------------------------
+  ## error.rate/vimp details
+  ##------------------------------------------------------
+  vimpFlag <- bootstrap == "by.root" && importance && ntree == 1
+  vimp <- NULL
+    
 
   ##------------------------------------------------------
   ## define the learner (used for setting the class)
@@ -208,6 +206,10 @@ boostmtree <- function(x,
 
   mu <- lapply(1:n, function(i) {rep(0, ni[i])})
   beta <- matrix(0, n, df.D)
+  if (vimpFlag) {
+    vimp <- matrix(0, M, p)
+    colnames(vimp) <- xvar.names
+  }
   if (ntree == 1) {
     baselearner <- membership.list <- gamma.list <- vector("list", length = M)
   }
@@ -308,8 +310,9 @@ boostmtree <- function(x,
 
     }
 
-    ## multivariate tree learner
+    ## multivariate tree base learner 
     else {
+      
       rfsrc.obj <- rfsrc(rfsrc.f,
                          data = incoming.data,
                          ntree = 1,
@@ -336,13 +339,40 @@ boostmtree <- function(x,
       ## Kmax is the number of pseudo-terminal nodes, where Kmax <= K
       Kmax <-  length(ptn.id)
 
+      ## membership for noised up data (if vimp requested)
+      if (vimpFlag) {
+
+        ## record the OOB data
+        ## NOTE: OOB is subject/id specific, exactly what we want in longitudinal settings
+        oob <- which(rfsrc.obj$inbag == 0)
+        n.oob <- length(oob)
+        
+        ## construct the noise matrix: restricted to OOB data 
+        Xnoise <- do.call(rbind, lapply(1:p, function(k) {
+          X.k <- X[oob,, drop = FALSE]
+          X.k[, k] <- sample(X.k[, k])
+          X.k
+        }))
+
+        ##determine the noised up membership
+        membershipNoise <- c(predict.rfsrc(rfsrc.obj,
+                        newdata = Xnoise,
+                        membership = TRUE,
+                        ptn.count = K,
+                        importance = "none")$ptn.membership)
+
+        ## Recode the membership to be sequential: needs to match the full sample order
+        membershipNoise <- as.numeric(factor(membershipNoise, levels = levels(factor(membership.org))))
+        
+      }
+
     }
 
 
     ## save the base learner
     baselearner[[m]] <- rfsrc.obj
 
-
+    
     ##############################################################################
     ##
     ##  At this point the algorithm diverges depending upon ntree
@@ -432,7 +462,7 @@ boostmtree <- function(x,
         ## update lambda, sigma
         lambda <- lambda.hat 
         sigma <- lambda * (1 - rho) 
-          
+
       }
 
       ##---------------------------------------------------------
@@ -487,12 +517,48 @@ boostmtree <- function(x,
       ## beta update
       beta.update <- matrix(unlist(lapply(1:n, function(i) {
         gamma[[membership[i]]]})), nrow = df.D)
-      beta <- beta + t(beta.update * nu.vec)
+      beta.old <- beta
+      beta <- beta.old + t(beta.update * nu.vec)
       ## mu update
+      mu.old <- mu
       mu <- lapply(1:n, function(i) {D[[i]] %*% beta[i, ]})
 
-    }
 
+      ##---------------------------------------------------------
+      ## step 5': vimp
+      ##---------------------------------------------------------
+
+      
+      if (vimpFlag) {
+
+        ## standardize the current beta coefficient: restricted to OOB data
+        ## calculate the tree contributed oob error
+        beta.std <- beta[oob,, drop = FALSE] * Ysd
+        beta.std[, 1] <- beta.std[, 1] + Ymean
+        err.oob <- l2Dist(Yorg[oob], lapply(1:n.oob, function(i) {D[[oob[i]]] %*% beta.std[i, ]}))
+
+        ## the vimp oob requires an updated vimped beta
+        ## calculate the tree contributed noised up error
+        beta.update.vimp <- lapply(1:p, function(k) {
+          membership.k <- membershipNoise[((k-1) * n.oob + 1):(k * n.oob)]
+          matrix(unlist(lapply(1:n.oob, function(i) {
+            gamma[[membership.k[i]]]})), nrow = df.D)
+        })
+        err.vimp <- sapply(1:p, function(k) {
+          beta.vimp.k <- beta.old[oob,, drop = FALSE] + t(beta.update.vimp[[k]] * nu.vec)
+          beta.vimp.k <- beta.vimp.k * Ysd
+          beta.vimp.k[, 1] <- beta.vimp.k[, 1] + Ymean
+          l2Dist(Yorg[oob], lapply(1:n.oob, function(i) {D[[oob[i]]] %*% beta.vimp.k[i, ]}))
+        })
+
+        ## save the vimp
+        #vimp[m, ] <- 100 * (err.vimp - err.oob) / (Ysd * l2Dist(mu[oob], mu.old[oob]))
+        vimp[m, ] <- 100 * (err.vimp - err.oob) / Ysd
+        
+      }
+
+    }
+   
 
     ##############################################################################
     ##
@@ -572,6 +638,7 @@ boostmtree <- function(x,
     ## we use a compound symmetric correlation matrix, but this can be generalized
     ## note: tm and x are used in the REML call -- although the theory does not call for it
     ##---------------------------------------------------------
+
     resid.data <- data.frame(y  = unlist(lapply(1:n, function(i) {Y[[i]] - mu[[i]]})),
                              x  = x,
                              tm = unlist(lapply(1:n, function(i) {tm[id == id.unq[i]]})),
@@ -599,7 +666,7 @@ boostmtree <- function(x,
       cat("phi   :", phi.vec[m], "\n")
       cat("rho   :", rho.vec[m], "\n")
     }
-
+    
     ##---------------------------------------------------------
     ## step 8: update sigma, save lambda
     ##---------------------------------------------------------
@@ -619,19 +686,19 @@ boostmtree <- function(x,
   ##---------------------------------------------------------
 
   beta <- beta * Ysd
-  if (ntree == 1) {
-    beta[, 1] <- beta[, 1] + Ymean
-  }
+  beta[, 1] <- beta[, 1] + Ymean
   mu <- lapply(1:n, function(i) {c(mu[[i]] * Ysd + Ymean)})
+  y <- lapply(1:n, function(i) {y[id == id.unq[i]]})
 
   ##---------------------------------------------------------
   ## return the promised object
   ##---------------------------------------------------------
 
   obj <- list(x = X,
+              xvar.names = xvar.names,
               time = lapply(1:n, function(i) {tm[id == id.unq[i]]}),
               id = id,
-              y = lapply(1:n, function(i) {y[id == id.unq[i]]}),
+              y = Yorg,
               ymean = Ymean,
               ysd = Ysd,
               gamma = gamma.list,
@@ -642,8 +709,10 @@ boostmtree <- function(x,
               rho = rho.vec,
               baselearner = baselearner,
               membership = membership.list,
+              vimp = if (!is.null(vimp)) colSums(vimp, na.rm = TRUE) else NULL,
               D = X.tm,
               d = d,
+              pen.ord = pen.ord,
               K = K,
               M = M,
               nu = nu,

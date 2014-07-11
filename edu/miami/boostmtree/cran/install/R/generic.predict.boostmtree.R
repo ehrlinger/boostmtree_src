@@ -195,16 +195,14 @@ generic.predict.boostmtree <- function(object,
     ## we must be careful not to over-tax mc.cores
     rf.cores.old <- getOption("rf.cores")
     mc.cores.old <- getOption("mc.cores")
-    options(rf.cores = 0, mc.cores = max(1, detectCores() / 2))
 
     ## membership from original grow tree
     membership <- mclapply(1:M, function(m) {
 
+      ## set the rf.cores/mc.cores to minimal values
       options(rf.cores = 0, mc.cores = 1)
       c(predict.rfsrc(baselearner[[m]],
                       newdata = X,
-                      outcome.target = 1, ## the target is irrelevant
-                      outcome = "train",
                       membership = TRUE,
                       ptn.count = K,
                       importance = "none")$ptn.membership)
@@ -222,11 +220,10 @@ generic.predict.boostmtree <- function(object,
           X.k
         }))
 
+        ## set the rf.cores/mc.cores to minimal values
         options(rf.cores = 0, mc.cores = 1)
         c(predict.rfsrc(baselearner[[m]],
                         newdata = Xnoise,
-                        outcome.target = 1, ## the target is irrelevant
-                        outcome = "train",
                         membership = TRUE,
                         ptn.count = K,
                         importance = "none")$ptn.membership)
@@ -238,11 +235,11 @@ generic.predict.boostmtree <- function(object,
 
       prox <- Reduce("+", mclapply(1:M, function(m) {
 
+        ## set the rf.cores/mc.cores to minimal values
         options(rf.cores = 0, mc.cores = 1)
         if (!testFlag) {
           predict.rfsrc(baselearner[[m]],
                         newdata = X,
-                        outcome.target = 1, ## the target is irrelevant
                         membership = TRUE,
                         ptn.count = K,
                         importance = "none",
@@ -253,7 +250,6 @@ generic.predict.boostmtree <- function(object,
           ntest <- nrow(X)
           predict.rfsrc(baselearner[[m]],
                         newdata = rbind(X, object$x),
-                        outcome.target = 1, ## the target is irrelevant
                         membership = TRUE,
                         ptn.count = K,
                         importance = "none",
@@ -327,10 +323,10 @@ generic.predict.boostmtree <- function(object,
   }
 
   ##---------------------------------------------------------
-  ## determine a cumulative error rate
+  ## predicted mu at observed time points
   ##---------------------------------------------------------
-
-  muhat <- mclapply(1:M, function(m) {
+  
+  mu <- mclapply(1:M, function(m) {
     ## extract those mu values corresponding to the observed time points
     ## we allow replicated time measurements for an individual
     ## therefore the match of tm to tm.unq is delicate
@@ -340,9 +336,13 @@ generic.predict.boostmtree <- function(object,
     })
   })
 
+  ##---------------------------------------------------------
+  ## determine a cumulative error rate
+  ##---------------------------------------------------------
+
   if (testFlag) {
     err.rate <- matrix(unlist(lapply(1:M, function(m) {
-      c(l1Dist(Y, muhat[[m]]), l2Dist(Y, muhat[[m]]))
+      c(l1Dist(Y, mu[[m]]), l2Dist(Y, mu[[m]]))
     })), ncol = 2, byrow = TRUE)
     colnames(err.rate) <- c("l1", "l2")
   }
@@ -368,7 +368,13 @@ generic.predict.boostmtree <- function(object,
     Mopt <- M
   }
 
+  ##---------------------------------------------------------
+  ## predicted mu at all unique time points
+  ##---------------------------------------------------------
 
+  DbetaT <- D %*% t(beta.list[[Mopt]])
+  muhat <- lapply(1:n, function(i) {DbetaT[, i]})
+  
   ##---------------------------------------------------------
   ## variable importance
   ##---------------------------------------------------------
@@ -380,10 +386,10 @@ generic.predict.boostmtree <- function(object,
       ## extract those mu values corresponding to the observed time points
       ## we allow replicated time measurements for an individual
       ## therefore the match of tm to tm.unq is delicate
-      muhat.k <- lapply(1:n, function(i) {
+      mu.k <- lapply(1:n, function(i) {
         DbetaT.k[, i][match(tm[[i]], tm.unq, tm[[i]])]
       })
-      l2Dist(Y, muhat.k) - err.rate[Mopt, "l2"]
+      l2Dist(Y, mu.k) - err.rate[Mopt, "l2"]
     }))
     names(vimp) <- xvar.names
   }
@@ -393,18 +399,21 @@ generic.predict.boostmtree <- function(object,
   ##---------------------------------------------------------
 
   pobj <- list(
-       boost.obj = object,
-       x = X,
-       time = tm,
-       time.unq = tm.unq,
-       y = if (testFlag) Y else NULL,
-       beta = beta.list[[Mopt]],
-       mu = muhat[[Mopt]],
-       err.rate = err.rate,
-       mse = err.rate[Mopt, "l2"],
-       vimp = vimp,
-       proximity = prox,
-       Mopt = if (testFlag) Mopt else NULL)
+               boost.obj = object,
+               x = X,
+               time = tm,
+               time.unq = tm.unq,
+               y = if (testFlag) Y else NULL,
+               beta = beta.list[[Mopt]],
+               mu = mu[[Mopt]],
+               muhat = muhat,
+               phi = object$phi[Mopt],
+               rho = object$rho[Mopt],
+               err.rate = err.rate,
+               mse = err.rate[Mopt, "l2"],
+               vimp = vimp,
+               proximity = prox,
+               Mopt = if (testFlag) Mopt else NULL)
 
   class(pobj) <- c("boostmtree", "predict", class(object)[3])
 

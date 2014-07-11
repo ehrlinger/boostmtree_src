@@ -72,10 +72,23 @@ const.sqrt <- function(ni, rho) {
 
 
 ## gls mean-squared error
-gls.mse  <- function(f, dta, trn) {
+gls.mse  <- function(f, dta, trn, type = c("corCompSym", "corAR1", "corSymm", "iid")) {
   f <- as.formula(f)
-  gls.grow <- tryCatch({gls(f, data = dta[trn, ], correlation = corCompSymm(form = ~ 1 | id))},
-                       error = function(ex){NULL})
+  type <- match.arg(type, c("corCompSym", "corAR1", "corSymm", "iid"))
+    gls.grow <- tryCatch({
+      if (type == "corCompSym") {
+        gls(f, data = dta[trn, ], correlation = corCompSymm(form = ~ 1 | id))
+      }
+      else if (type == "corAR1") {
+        gls(f, data = dta[trn, ], correlation = corAR1(form = ~ 1 | id))
+      }
+      else if (type == "corSymm") {
+        gls(f, data = dta[trn, ], correlation = corSymm(form = ~ 1 | id))
+      }
+      else {
+        gls(f, data = dta[trn, ])
+      }
+    }, error = function(ex){NULL})
   if (!is.null(gls.grow)) {
     gls.pred  <- tapply(model.matrix(f, dta[-trn,]) %*% gls.grow$coef,
                         dta[-trn, "id"], function(x) {x})
