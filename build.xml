@@ -9,9 +9,9 @@
   <!-- Generic project properties -->
   <property name="project.name" value="BOOSTMTREE Build Suite"/>
   <property name="project.version.token" value="_PROJECT_VERSION_ID_"/>
-  <property name="project.version" value="0.0.3"/>
+  <property name="project.version" value="0.0.4"/>
   <property name="project.build.token" value="_PROJECT_BUILD_ID_"/>
-  <property name="project.build" value="bld20140711a"/>
+  <property name="project.build" value="bld20150128"/>
   <property name="project.pkg.name.token" value="_PROJECT_PACKAGE_NAME_"/>
 
   <property name="http.prefix.token" value="_HTTP_PREFIX_"/>
@@ -62,7 +62,7 @@
     ========================================================================
   -->
   <target name="setSourceTree" depends="internal.init,internal.testSourceTree">
-    <property name="bldDir" value="../../../../build"/>
+    <property name="bldDir" value="../build"/>
   </target>
 
 
@@ -390,13 +390,12 @@ ${scriptFileExitLine}
   <target name="source-generic" depends="setSourceTree">
     <mkdir dir="${bldDir}"/>
     <mkdir dir="${bldDir}/cran"/>
-    <mkdir dir="${bldDir}/install"/>
     <zip destfile="${bldDir}/cran/install/${project.core.name}.${project.build}.zip"
-         basedir="../../"
-         includes="miami/boostmtree/**"/>
+         basedir="../"
+         includes="boostmtree/**"/>
     <tar destfile="${bldDir}/cran/install/${project.core.name}.${project.build}.tar"
-         basedir="../../"
-         includes="miami/boostmtree/**"/>
+         basedir="../"
+         includes="boostmtree/**"/>
   </target>
 
   <!--

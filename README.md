@@ -21,8 +21,7 @@ boostmtree
 
 # user name and password access
 UserID:       kogalur
-Password:     MW4euZE8nP%Ndx
-
+Password:
 
 If you've added new files:
 > git add cran/install/R/new.file.R
@@ -87,14 +86,11 @@ shows the diffs at each commit.
 TAG             INIT    DESCRIPTION
 ------------------------------------------------------------------------
 ------------------------------------------------------------------------
-bld20140711a    ubk     Update to include changes in bld20140710.
-bld20140711     ubk     Revert to bld20140616
-bld20140710     hi      Bad commit by Hemant.  Added vimp for training
-                        data. Improved man pages.  Added simulation R
-                        and man pages.  Changed default options based
-                        on running simulations.  General cleaning up
-                        of R and man pages.
 
+------------------------------------------------------------------------
+TRUNK TAGS
+------------------------------------------------------------------------
+bld20140610     ubk     Initial check in of all code and build framework
 bld20140616     hi      Compiled man pages with illustrative examples.
                         Upgraded boostmtree code.  Y-values are scaled.
                         Added forest base-learners (TBD predict mode).
@@ -107,11 +103,18 @@ bld20140616     hi      Compiled man pages with illustrative examples.
                         to utilities including hidden variable parsing.
                         Predict code upgraded to accomodate scaling of Y.
                         Replaced benchmark test code with improved examples.
+bld20140710     hi      Bad commit by Hemant.  Added vimp for training
+                        data. Improved man pages.  Added simulation R
+                        and man pages.  Changed default options based
+                        on running simulations.  General cleaning up
+                        of R and man pages.
+bld20140711     ubk     Revert to bld20140616
+bld20140711a    ubk     Update to include changes in bld20140710.
+bld20150128     ubk     Directory structure cleanup
 
-------------------------------------------------------------------------
-TRUNK TAGS
-------------------------------------------------------------------------
-bld20140610     ubk     Initial check in of all code and build framework
+
+
+
 
 
 ------------------------------------------------------------------------
