@@ -7,7 +7,7 @@
 
 library(tools)
 
-fileSuffix <- c("txt", "tab", "csv")
+fileSuffix <- c("txt", "tab")
 
 for (j in 1:length(fileSuffix)) {
 

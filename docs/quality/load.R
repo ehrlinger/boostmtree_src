@@ -10,13 +10,11 @@
 build.path = NULL
 
 if (file.exists(path = paste(getwd(), "/../quality", sep="")) &
-    file.exists(path = paste(getwd(), "/R", sep="")) &
-    file.exists(path = paste(getwd(), "/lib", sep="")) &
+    file.exists(path = paste(getwd(), "/../cran/_PROJECT_PACKAGE_NAME_/R", sep="")) &
     file.exists(path = paste(getwd(), "/../../build", sep=""))) {
 
-  build.path = paste(getwd(), "/../../", sep="")
-  argh.path = paste(getwd(), "/R/", sep="")
-  lib.path = paste(getwd(), "/lib/_PROJECT_ARCH_TYPE_/", sep="")
+  build.path = paste(getwd(), "/../", sep="")
+  source.path = paste(getwd(), "/../cran/_PROJECT_PACKAGE_NAME_/R/", sep="")
 }
 
 if (is.null(build.path)) {
@@ -26,7 +24,7 @@ if (is.null(build.path)) {
 }
 
 ## Dependency automatically loaded when package is loaded.
-library("randomForestSRCM")
+library("randomForestSRC")
 
 ###########################################################################
 #  Source files, and load native code object.
@@ -44,9 +42,6 @@ source(paste(argh.path, "utilities.R", sep=""))
 source(paste(argh.path, "boostmtree.news.R", sep=""))
 source(paste(argh.path, "zzz.R", sep=""))
 
-## dyn.load(paste(lib.path, "_PROJECT_LIBRARY_NAME_", sep=""))
-
 cat("\n           Version:  _PROJECT_VERSION_ID_ ");
 cat("\n Development Build:  _PROJECT_BUILD_ID_ ");
 cat("\n      Architecture: _PROJECT_ARCH_TYPE_ ");
-cat("\n   Affirm Parallel: _PROJECT_SUPPORT_OPENMP_ \n\n");

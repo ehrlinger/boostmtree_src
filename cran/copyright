@@ -2,13 +2,13 @@
 ////**********************************************************************
 ////
 ////  BOOSTED MULTIVARIATE TREES FOR LONGITUDINAL DATA (BOOSTMTREE)
-////  Version _PROJECT_VERSION_ID_
+////  Version _PROJECT_VERSION_ID_ (_PROJECT_BUILD_ID_)
 ////
-////  Copyright 2014, University of Miami
+////  Copyright 2016, University of Miami
 ////
 ////  This program is free software; you can redistribute it and/or
 ////  modify it under the terms of the GNU General Public License
-////  as published by the Free Software Foundation; either version 2
+////  as published by the Free Software Foundation; either version 3
 ////  of the License, or (at your option) any later version.
 ////
 ////  This program is distributed in the hope that it will be useful,
@@ -33,8 +33,15 @@
 ////    email:  hemant.ishwaran@gmail.com
 ////    URL:    http://web.ccs.miami.edu/~hishwaran
 ////    --------------------------------------------------------------
+////    Amol Pande
+////    Division of Biostatistics
+////    1120 NW 14th Street
+////    University of Miami, Miami FL 33136
+////
+////    email:  amoljpande@gmail.com
+////    --------------------------------------------------------------
 ////    Udaya B. Kogalur, Ph.D.
-////    Adjunct Staff
+////    Consultant Staff
 ////    Dept of Quantitative Health Sciences
 ////    Cleveland Clinic Foundation
 ////
@@ -42,7 +49,7 @@
 ////    5425 Nestleway Drive, Suite L1
 ////    Clemmons, NC 27012
 ////
-////    email:  commerce@kogalur.com
+////    email:  ubk@kogalur.com
 ////    URL:    http://www.kogalur.com
 ////    --------------------------------------------------------------
 ////

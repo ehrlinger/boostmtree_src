@@ -3,8 +3,8 @@
 \alias{_PROJECT_PACKAGE_NAME_}
 \title{Boosted multivariate trees for longitudinal data}
 \description{
-  Multivariate extension of Friedman's gradient descent boosting
-  method (Friedman, 2001) to longitudinal data using multivariate tree base
+  Multivariate extension of Friedman's (2001) gradient descent boosting
+  method to longitudinal data using multivariate tree base
   learners.  Covariate-time interactions are modeled using penalized
   B-splines (P-splines) with estimated adaptive smoothing parameter.
 }
@@ -14,7 +14,7 @@
    id,
    y,
    M = 200,
-   nu = 0.1,
+   nu = 0.05,
    K = 5,
    nknots = 10,
    d = 3,
@@ -54,7 +54,8 @@
     \item{lambda.iter}{Number of iterations used to estimate lambda
       (only applies when lambda is not supplied and adaptive smoothing
       is employed).}
-  \item{importance}{Calculate importance values for the x-variables?}
+    \item{importance}{Calculate importance values for the x-variables?
+      Currently not implemented (use \command{predict.boostmtree} instead).}
     \item{svd.tol}{Tolerance value used in the SVD calculation of the
       penalty matrix.  For experts only.}
     \item{forest.tol}{Tolerance used for forest weighted least squares
@@ -78,13 +79,30 @@
   the smoothing parameter as well.
 
   By default, trees are grown from a bootstrap sample of the data --
-  thus the boosting method employed here is actually a form of
+  thus the boosting method employed here is a modified example of
   stochastic gradient descent boosting (Friedman, 2002).  Stochastic
   descent often improves performance and has the added advantage that
   out-of-sample data (out-of-bag, OOB) can be used to calculate
-  variable importance (VIMP).  To request VIMP use the option
-  \code{importance = TRUE}.  Note that VIMP calculations can be slow,
-  especially in high dimensions.  
+  variable importance (VIMP).  This feature will be implemented in
+  future releases.
+
+   The package implements R-side parallel processing by replacing
+  the R function \command{lapply} with \command{mclapply} found in the
+  \pkg{parallel} package.  You can set the number of cores accessed by
+  \command{mclapply} by issuing the command \command{options(mc.cores =
+    x)}, where \command{x} is the number of cores.  The options command
+  can also be placed in the users .Rprofile file for convenience.  You
+  can, alternatively, initialize the environment variable
+  \command{MC_CORES} in your shell environment.
+
+  As an example, issuing the following options command uses all
+  available cores for R-side parallel processing:
+  
+  \command{options(mc.cores=detectCores())}
+  
+  However, be cautious when setting \command{mc.cores}.  This can create
+  not only high CPU usage but also high RAM usage, especially when using
+  functions \command{partialPlot} and \command{predict}.
 }
 \value{
      An object of class \code{(boostmtree, grow)} with the following
@@ -114,7 +132,7 @@
      \item{membership}{List of length \emph{M}, with each component
        containing the terminal node membership for a given boosting
        iteration.}
-     \item{vimp}{Variable importance (relative RMSE).}
+     \item{vimp}{Variable importance (relative RMSE).  Not currently implemented}
      \item{D}{Design matrix for time.}
      \item{d}{Degree of the piecewise B-spline polynomial.}
      \item{pen.ord}{Penalization difference order.}
@@ -124,7 +142,7 @@
      \item{ntree}{Number of trees.}
 }
 \author{
-    Hemant Ishwaran and Udaya B. Kogalur
+  Hemant Ishwaran, Pande A. and Udaya B. Kogalur
 }
 \references{
   Friedman J.H. (2001). Greedy function approximation: a gradient
@@ -133,7 +151,8 @@
   Friedman J.H. (2002). Stochastic gradient boosting.
   \emph{Comp. Statist. Data Anal.}, 38(4):367--378.
 
-  Ishwaran et al. (2014).  Boosting multivariate trees for
+  Pande A., Li L., Rajeswaran J., Ehrlinger J., Kogalur U.B.,
+  Blackstone E.H., Ishwaran H. (2016).  Boosted multivariate trees for
   longitudinal data.
 }
 \seealso{
@@ -141,13 +160,12 @@
   \command{\link{plot.boostmtree}},
   \command{\link{predict.boostmtree}},
   \command{\link{print.boostmtree}},
-  \command{\link{simLong}},
+  \command{\link{simLong}}
 }
 \examples{
 ##------------------------------------------------------------
 ## Synthetic example
-##
-##  high correlation, quadratic time with quadratic interaction
+## high correlation, quadratic time with quadratic interaction
 ##-------------------------------------------------------------
 #simulate the data
 dta <- simLong(n = 50, N = 5, rho =.80, model = 2)$dtaL
@@ -161,7 +179,7 @@ print(boost.grow)
 #plot.results
 plot(boost.grow)
 
-\donttest{
+\dontrun{
 ##----------------------------------------------------------------------------
 ## spirometry data
 ##----------------------------------------------------------------------------
@@ -172,7 +190,6 @@ spr.obj <- boostmtree(spirometry$features, spirometry$time, spirometry$id, spiro
                         M = 100, nu = .025, nknots = 15)
 plot(spr.obj)
 }
-
 }
 \keyword{boosting}
 

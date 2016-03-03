@@ -22,10 +22,10 @@
   }
 }
 \references{
-Mason D.P., Rajeswaran J., Li L., Murthy S.C., Su J.W., Pettersson G.B.,
-Blackstone E.H. Effect of changes in postoperative spirometry on
-survival after lung transplantation. \emph{J. Thorac. Cardiovasc. Surg.},
-144:197-203, 2012.
+  Mason D.P., Rajeswaran J., Li L., Murthy S.C., Su J.W., Pettersson G.B.,
+  Blackstone E.H. Effect of changes in postoperative spirometry on
+  survival after lung transplantation. \emph{J. Thorac. Cardiovasc. Surg.},
+  144:197-203, 2012.
 }
 \examples{data(spirometry, package = "_PROJECT_PACKAGE_NAME_")}
 \keyword{datasets}

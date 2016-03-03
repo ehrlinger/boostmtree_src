@@ -14,10 +14,11 @@
   various parameters against the number of boosting iterations.
 }
 \author{
-  Hemant Ishwaran and Udaya B. Kogalur
+  Hemant Ishwaran, Pande A. and Udaya B. Kogalur
 }
 \references{
-  Ishwaran et al. (2014).  Boosting multivariate trees for
+  Pande A., Li L., Rajeswaran J., Ehrlinger J., Kogalur U.B.,
+  Blackstone E.H., Ishwaran H. (2016).  Boosted multivariate trees for
   longitudinal data.
 }
 \keyword{plot}

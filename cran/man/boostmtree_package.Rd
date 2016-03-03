@@ -5,19 +5,13 @@
   Boosted multivariate trees for longitudinal data.
 }
 \description{
-  This package blah blah blah
-  blah blah blah
-  blah blah blah
-  blah blah blah
+  Multivariate extension of Friedman's (2001) gradient descent boosting
+  method to longitudinal data using multivariate tree base learners.
+  Covariate-time interactions are modeled using penalized B-splines
+  (P-splines) with estimated adaptive smoothing parameter.
 }
-\section{blah blah blah }{
- This package blah blah blah
-}
-\section{blah blah blah }{
- This package blah blah blah
-}
-\section{Package Overview}{
 
+\section{Package Overview}{
   This package contains many useful functions and users should read the
   help file in its entirety for details.  However, we briefly mention
   several key functions that may make it easier to navigate and
@@ -27,10 +21,8 @@
     \item \command{\link{boostmtree}}
 
     This is the main entry point to the package.  It grows a
-    multivariate tree
-    using user supplied training data.  We refer to the resulting object
-    as a RF-SRC grow object.  Formally, the resulting object has class
-    \code{(rfsrc, grow)}.
+    multivariate tree using user supplied training data.  Trees are
+    grown using the \pkg{randomForestSRC} R-package.
 
     \item \command{\link{predict.boostmtree}} (\command{predict})
 
@@ -41,11 +33,14 @@
   }
 }
 \author{
-    Hemant Ishwaran and Udaya B. Kogalur
+  Hemant Ishwaran, Pande A. and Udaya B. Kogalur
 }
 \references{
     Breiman L. (2001). Random forests, \emph{Machine Learning}, 45:5-32.
 
+    Friedman J.H. (2001). Greedy function approximation: a gradient
+    boosting machine, \emph{Ann. of Statist.}, 5:1189-1232.
+     
     Ishwaran H. and Kogalur U.B. (2007).  Random survival forests for R,
     \emph{Rnews}, 7(2):25-31.
 
@@ -60,19 +55,17 @@
     Ishwaran H., Gerds T.A., Kogalur U.B., Moore R.D., Gange S.J. and Lau
     B.M. (2014). Random survival forests for competing risks.  To appear
     in \emph{Biostatistics}.
+
+    Pande A., Li L., Rajeswaran J., Ehrlinger J., Kogalur U.B.,
+    Blackstone E.H., Ishwaran H. (2016).  Boosted multivariate trees for
+    longitudinal data.
 }
 \seealso{
-  \command{\link{find.interaction}},
-  \command{\link{impute.rfsrc}},
-  \command{\link{max.subtree}},
-  \command{\link{plot.competing.risk}},
-  \command{\link{plot.rfsrc}},
-  \command{\link{plot.survival}},
-  \command{\link{plot.variable}},
-  \command{\link{predict.rfsrc}},
-  \command{\link{print.rfsrc}},
-  \command{\link{var.select}},
-  \command{\link{vimp}}
+  \command{\link{partialPlot}},
+  \command{\link{plot.boostmtree}},
+  \command{\link{predict.boostmtree}},
+  \command{\link{print.boostmtree}},
+  \command{\link{simLong}}
 }
 \keyword{package}
 

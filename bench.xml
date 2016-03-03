@@ -4,15 +4,15 @@
 <!-- RF-SRC Benchmark Suite     Apache Ant version 1.8.0   -->
 <!-- ===================================================== -->
 
-<project name="RF-SRC(M) Benchmark Suite" basedir="." default="bench-suite-build-64">
+<project name="BOOSTMTREE Benchmark Suite" basedir="." default="bench-suite-build">
 
-  <property name="project.name" value="RF-SRC(M) Benchmark Suite"/>
-  <property name="project.version" value=""/>
-  <property name="project.build" value=""/>
+  <property name="project.name" value="BOOSTMTREE Benchmark Suite"/>
+  <property name="project.version" value="_PROJECT_VERSION_ID_"/>
+  <property name="project.build" value="_PROJECT_BUILD_ID_"/>
+  <property name="stealth.flag" value="RF_STLTH_FLAG"/>
 
   <!-- Generic project properties -->
-  <property name="project.core.name" value="benchmark"/>
-  <property name="logFile" value="${project.core.name}.log"/>
+  <property name="logFile" value="benchmark.log"/>
 
   <!-- Static Locations -->
   <property name="qacDir" value="quality"/>
@@ -79,21 +79,24 @@
   -->
   <target name="bench-suite-generic" depends="internal.isRarchSet">
 
-    <echo message="Benchmark Target Initiated with
-                   -use.package=${packageUse} -update.benchmark=${updateBenchmark}"/>
+    <echo message="Benchmark Target Initiated with"/>
+    <echo message="  -use.package=${packageUse}"/>
+    <echo message="  -update.benchmark=${updateBenchmark}"/>
+    <echo message="  -stealth.flag=${stealth.flag}"/>
+    <echo message=""/>
 
     <echo file="${qacDir}/test${scriptExtension}" append="false">${scriptFileCommentLine}
 R ${Rarch} CMD BATCH --no-restore --no-save test.R output${sep}${logFile}
 ${scriptFileExitLine}
     </echo>
 
-
-
     <echo message="  test"/>
     <exec dir="${qacDir}" executable="R" failonerror="TRUE">
       <arg line="${Rarch} CMD BATCH --no-restore --no-save "/>
       <arg line="-use.package=${packageUse}
-                 -update.benchmark=${updateBenchmark} test.R"/>
+                 -update.benchmark=${updateBenchmark}
+                 -stealth.flag=${stealth.flag} test.R"/>
+      
       <arg line="output${sep}${logFile}"/>
     </exec>
     <echo message="    grow.txt"/>
@@ -103,7 +106,38 @@ ${scriptFileExitLine}
 
   </target>
 
+ <!--
+    ========================================================================
+      Internal target, bench-examples-generic
+    ========================================================================
+  -->
+  <target name="bench-examples-generic" depends="internal.isRarchSet">
 
+    <echo message="Benchmark Target Initiated with"/>
+    <echo message="  -use.package=${packageUse}"/>
+    <echo message="  -update.benchmark=${updateBenchmark}"/>
+    <echo message="  -stealth.flag=${stealth.flag}"/>
+    <echo message=""/>
+
+    <echo file="${qacDir}/all.examples${scriptExtension}" append="false">${scriptFileCommentLine}
+R ${Rarch} CMD BATCH --no-restore --no-save all.examples.R output${sep}${logFile}
+${scriptFileExitLine}
+    </echo>
+
+    <echo message="  all.examples"/>
+    <exec dir="${qacDir}" executable="R" failonerror="TRUE">
+      <arg line="${Rarch} CMD BATCH --no-restore --no-save"/>
+      <arg line="-use.package=${packageUse}
+                 -update.benchmark=${updateBenchmark}
+                 -stealth.flag=${stealth.flag} all.examples.R"/>
+      <arg line="output${sep}${logFile}"/>
+    </exec>
+    <echo message="    all.examples.txt"/>
+    <exec dir="${qacDir}" executable="diff">
+      <arg line="-w output/all.examples.txt benchmark/all.examples.txt"/>
+    </exec>
+
+  </target>
 
 
   <!--
@@ -112,31 +146,33 @@ ${scriptFileExitLine}
     ========================================================================
   -->
 
-
  <!--
     ========================================================================
       BENCH-SUITE-PACKAGE-XX target, Entry Point
     ========================================================================
   -->
-  <target name="bench-suite-package-32" depends="setBuildTree,internal.osPrep,internal.set32,setUpdateBenchmarkFalse,setPackageUseTrue,bench-suite-generic"/>
-  <target name="bench-suite-package-64" depends="setBuildTree,internal.osPrep,internal.set64,setUpdateBenchmarkFalse,setPackageUseTrue,bench-suite-generic"/>
+  <target name="bench-suite-package" depends="setBuildTree,internal.osPrep,internal.set64,setUpdateBenchmarkFalse,setPackageUseTrue,bench-suite-generic"/>
 
  <!--
     ========================================================================
       BENCH-SUITE-BUILD-XX target, Entry Point
     ========================================================================
   -->
-  <target name="bench-suite-build-32" depends="setBuildTree,internal.osPrep,internal.set32,setUpdateBenchmarkFalse,setPackageUseFalse,bench-suite-generic"/>
-  <target name="bench-suite-build-64" depends="setBuildTree,internal.osPrep,internal.set64,setUpdateBenchmarkFalse,setPackageUseFalse,bench-suite-generic"/>
+  <target name="bench-suite-build" depends="setBuildTree,internal.osPrep,internal.set64,setUpdateBenchmarkFalse,setPackageUseFalse,bench-suite-generic"/>
 
+  <!--
+    ========================================================================
+      BENCH-EXAMPLES-PACKAGE-XX target, Entry Point
+    ========================================================================
+  -->
+  <target name="bench-examples-package"    depends="setBuildTree,internal.osPrep,internal.set64,setUpdateBenchmarkFalse,setPackageUseTrue,bench-examples-generic"/>
 
- <!--
+  <!--
     ========================================================================
       BENCH-SUITE-UPDATE-XX target, Entry Point
     ========================================================================
   -->
-  <target name="bench-suite-update-32"  depends="setBuildTree,internal.osPrep,internal.set32,setUpdateBenchmarkTrue,setPackageUseFalse,bench-suite-generic"/>
-  <target name="bench-suite-update-64"  depends="setBuildTree,internal.osPrep,internal.set64,setUpdateBenchmarkTrue,setPackageUseFalse,bench-suite-generic"/>
+  <target name="bench-suite-update"  depends="setBuildTree,internal.osPrep,internal.set64,setUpdateBenchmarkTrue,setPackageUseFalse,bench-suite-generic"/>
 
 
   <!--
@@ -148,14 +184,18 @@ ${scriptFileExitLine}
     <echo message=""/>
     <echo message=" Available targets are:"/>
     <echo message=""/>
-    <echo message=" bench-suite-package-xx"/>
-    <echo message="     --> run the benchmark suite tests in xx-bit mode on the CRAN package"/>
-    <echo message=" bench-suite-build-xx"/>
-    <echo message="     --> run the benchmark suite tests in xx-bit mode on the build"/>
-    <echo message="     --> the DEFAULT target is 64-bit execution"/>
+    <echo message=" bench-suite-package"/>
+    <echo message="     --> run the benchmark suite tests in 64-bit mode on the CRAN package"/>
     <echo message=""/>
-    <echo message=" bench-suite-update-xx"/>
-    <echo message="     --> update the benchmark suite tests in xx-bit mode on the build"/>
+    <echo message=" bench-examples-package"/>
+    <echo message="     --> run the benchmark Rd tests in 64-bit mode on the CRAN package"/>
+    <echo message=""/>
+    <echo message=" bench-suite-build"/>
+    <echo message="     --> run the benchmark suite tests in 64-bit mode on the build"/>
+    <echo message="     --> *** DEFAULT TARGET ***"/>
+    <echo message=""/>
+    <echo message=" bench-suite-update"/>
+    <echo message="     --> update the benchmark suite tests in 64-bit mode on the build"/>
     <echo message=""/>
 
   </target>

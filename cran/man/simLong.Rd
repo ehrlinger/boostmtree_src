@@ -3,7 +3,7 @@
 \title{Simulate longitudinal data}
 \description{
   Simulates longitudinal data from models with increasing complexity of
-  covariate-time interactions (Ishwaran et al., 2014).
+  covariate-time interactions.
 }
 \usage{simLong(n,
  ntest = 0,
@@ -36,7 +36,7 @@
     \item \emph{\code{model=3}:} Quadratic time-quadratic two-way
     covariate interaction.
   }
-  For details see Ishwaran et al. (2014).
+  For details see Pande et al. (2016).
 }
 \value{
   An invisible list with the following components:
@@ -47,10 +47,11 @@
   \item{f.true}{Formula of the simulation model.}
 }
 \author{
-  Hemant Ishwaran and Udaya B. Kogalur
+  Hemant Ishwaran, Pande A. and Udaya B. Kogalur
 }
 \references{
-  Ishwaran et al. (2014).  Boosting multivariate trees for
+  Pande A., Li L., Rajeswaran J., Ehrlinger J., Kogalur U.B.,
+  Blackstone E.H., Ishwaran H. (2016).  Boosted multivariate trees for
   longitudinal data.
 }
 \keyword{simulation}

@@ -9,6 +9,7 @@ predict.boostmtree <-
            proximity = FALSE,
            verbose = TRUE,
            eps = 1e-4,
+           forest.tol = 1e-3,
            ...)
 {
 
@@ -23,6 +24,7 @@ predict.boostmtree <-
                                                proximity = proximity,
                                                verbose = verbose,
                                                eps = eps,
+                                               forest.tol = forest.tol,
                                                ...)
 
   return(result.predict)

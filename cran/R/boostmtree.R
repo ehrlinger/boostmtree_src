@@ -16,7 +16,7 @@
 ## pen.ord       differencing order used to define the penalty
 ## svd.tol       tolerance used in svd of penalty matrix
 ## lambda.max    tolerance used for adaptively estimated lambda (caps it)
-## forest.tol    tolderance used for forest weighted least squares solution
+## forest.tol    tolerance used for forest weighted least squares solution
 ## verbose       (logical) terminal output?
 ##------------------------------------------------------
 
@@ -25,7 +25,7 @@ boostmtree <- function(x,
                        id,
                        y,
                        M = 200,
-                       nu = 0.1,
+                       nu = 0.05,
                        K = 5,
                        nknots = 10,
                        d = 3,
@@ -35,11 +35,25 @@ boostmtree <- function(x,
                        lambda.iter = 2,
                        importance = FALSE,
                        svd.tol = 1e-6,
-                       forest.tol = 1e-3,                       
+                       forest.tol = 1e-3,
                        verbose = TRUE,
                        ...)
 {
 
+  ##------------------------------------------------------
+  ## is this a univariate setting?
+  ## if so, flag it and make a zero time vector
+  ## we also set d < 0 to trigger no time-covariate fitting
+  ##------------------------------------------------------
+  univariate <- FALSE
+  id.unq <- sort(unique(id))
+  n <- length(id.unq)
+  if (length(id.unq) == length(id)) {
+    univariate <- TRUE
+    tm <- rep(0, n)
+    d <- -1
+  }
+  
   ##------------------------------------------------------
   ## parse the data: processing/initialization
   ## set various dimensions/terms required later
@@ -47,10 +61,10 @@ boostmtree <- function(x,
   ## the y-centered mean and scaling values must be corrected later
   ## data is sorted on the id
   ##------------------------------------------------------
-
   user.option <- list(...)
-  id.unq <- sort(unique(id))
-  n <- length(id.unq)
+  if (any(is.na(id)) || any(is.na(y)) || any(is.na(x)) || any(is.na(tm))) {
+    stop("missing values encountered: remove observations with missing values")
+  }
   x <- as.data.frame(x)
   p <- ncol(x)
   xvar.names <- colnames(x)
@@ -67,7 +81,6 @@ boostmtree <- function(x,
   ni <- unlist(lapply(1:n, function(i) {sum(id == id.unq[i])}))
   id <- sort(id)
   
-
   ##------------------------------------------------------
   ## define the Di matrix
   ##------------------------------------------------------
@@ -99,7 +112,7 @@ boostmtree <- function(x,
     }
   }
   ## there is no time-componentt!!
-  else {
+  else {    
     X.tm <- cbind(rep(1, n.tm))
     lambda <- 0
   }
@@ -118,7 +131,6 @@ boostmtree <- function(x,
   ## regularization details
   ## allows different nu values for b0 and b1
   ##------------------------------------------------------
-
   nu <- {if (length(nu) > 1) nu else rep(nu, 2)}
   if (sum(!(0 < nu & nu <= 1)) > 0) {
     stop("regularization parameter (nu) must be in (0,1]")
@@ -128,15 +140,15 @@ boostmtree <- function(x,
   ##------------------------------------------------------
   ## tree/forest base-learner parameters used for rfsrc
   ##------------------------------------------------------
-
   ntree <- is.hidden.ntree(user.option)
   bootstrap <- is.hidden.bootstrap(user.option)
   if (ntree == 1) {
-    nodesize = max(1, round(n/(2 * K)))
+    nodesize <- max(1, round(n/(2 * K)))
     mtry <- df.D + p
   }
   else {
-    nodesize <- max(1, round(n/K))
+    nodedepth <- max(0, log(max(0, K - 1), base = 2))
+    nodesize <- 1
     mtry <- NULL
     if (missing(lambda) || lambda < 0) {
       lambda <- 0
@@ -145,7 +157,9 @@ boostmtree <- function(x,
   
   ##------------------------------------------------------
   ## error.rate/vimp details
+  ## TBD TBD TBD
   ##------------------------------------------------------
+  importance <- FALSE
   vimpFlag <- bootstrap == "by.root" && importance && ntree == 1
   vimp <- NULL
     
@@ -153,7 +167,6 @@ boostmtree <- function(x,
   ##------------------------------------------------------
   ## define the learner (used for setting the class)
   ##------------------------------------------------------
-
   if (ntree > 1) {
     learnerUsed <- "mforest"
   }
@@ -174,9 +187,8 @@ boostmtree <- function(x,
   ## determine if lambda can be estimated
   ## define the penalty matrices
   lambda.est.flag <- FALSE
-
   pen.lsq.matx <- penBSderiv(df.D - 1, pen.ord)
-  if (ntree == 1 && (missing(lambda) || lambda < 0)) {
+  if (!univariate && ntree == 1 && (missing(lambda) || lambda < 0)) {
     if (df.D >= (pen.ord + 2)) {
       lambda.est.flag <- TRUE
       ## use svd to get the square root and inverse square root of P
@@ -203,7 +215,6 @@ boostmtree <- function(x,
   ## final parameter checks
   ## multivariate tree formula/details
   ##------------------------------------------------------
-
   mu <- lapply(1:n, function(i) {rep(0, ni[i])})
   beta <- matrix(0, n, df.D)
   if (vimpFlag) {
@@ -233,8 +244,8 @@ boostmtree <- function(x,
     }
   }
 
-  ## initialize sigma (lambda * (1-rho))
-  sigma <- 1
+  ## initialize sigma (=lambda * (1-rho)) and phi
+  sigma <- phi <- 1
   if (!lambda.est.flag) {
     sigma <- lambda * (1 - rho)
   }
@@ -249,7 +260,6 @@ boostmtree <- function(x,
   ##
   ## MAIN LOOP
   ##------------------------------------------------------
-
   if (verbose) cat("  implementing multivariate boosting...\n")
 
   for (m in 1:M) {
@@ -262,50 +272,55 @@ boostmtree <- function(x,
     ## step 3: calculate the negative gradient
     ## we discard the unnecessary (1-rho)^{-1} constant
     ##---------------------------------------------------------
-
     gm <- t(matrix(unlist(lapply(1:n, function(i) {
-      rmi <- rho /(1 + (ni[i] - 1) * rho)
+      rmi <- rho.inv(ni[i], rho)##this function controls instability in R^{-1}
       cmi <- rmi * sum(Y[[i]] - mu[[i]], na.rm = TRUE)
       t(D[[i]]) %*% (Y[[i]] - mu[[i]] - cbind(rep(cmi, ni[i])))
     })), nrow = df.D))
 
     ##---------------------------------------------------------
     ##step 4(a): fit a K-terminal node multivariate regression tree
-
+    ##
     ## gm    n x df.D  gradient-matrix
     ## X     n x p data frame containing x values
     ## K     desired number of terminal nodes
-
+    ##
     ## Currently pruning is only available in predict mode.
     ## To recover the pruned membership of the training data,
     ## we must use the option "ptn.count"
-
+    ##
     ## Thus we first we grow a tree with > K terminal nodes.  We then
     ## prune the tree back to K terminal nodes.  For convenience, we
     ## roughly calculate the initial nodesize such that the number of
     ## terminal nodes is 2 * K.
-
+    ##
     ##
     ## If ntree > 1, we don't worry about pruning and grow a forest with
-    ## roughly K terminal nodes
+    ## roughly K terminal nodes.  We do this by constraining the node depth
+    ## to log_2(K-1) and use a minimal nodesize of 1.
     ##
     ##---------------------------------------------------------
-
     incoming.data <- cbind(gm, X)
     names(incoming.data) = c(Y.names, names(X))
 
     ## multivariate forest learner
     if (ntree > 1) {
+
       rfsrc.obj <- rfsrc(rfsrc.f,
                          data = incoming.data,
                          mtry = mtry,
+                         nodedepth = nodedepth,
                          nodesize = nodesize,
                          importance = "none",
                          bootstrap = bootstrap,
                          ntree = ntree,
-                         forest.wt = TRUE)
+                         forest.wt = TRUE)##TBD TBD, use OOB forest weights?
 
-      Kmax <- n
+      ## Kmax is the maximum number of terminal nodes
+      Kmax <- max(rfsrc.obj$leaf.count, na.rm = TRUE)
+      
+      ## save the base learner
+      baselearner[[m]] <- list(forest = rfsrc.obj)
 
 
     }
@@ -321,6 +336,9 @@ boostmtree <- function(x,
                          importance = "none",
                          bootstrap = bootstrap)
 
+      ## save the base learner
+      baselearner[[m]] <- rfsrc.obj
+      
       ## the outcome.target is irrelevant
       result.pred <- predict.rfsrc(rfsrc.obj,
                                    membership = TRUE,
@@ -369,8 +387,6 @@ boostmtree <- function(x,
     }
 
 
-    ## save the base learner
-    baselearner[[m]] <- rfsrc.obj
 
     
     ##############################################################################
@@ -402,8 +418,7 @@ boostmtree <- function(x,
 
         transf.data <- mclapply(1:n, function(i) {
           if (ni[i] > 1) {
-            ci <- const.sqrt(ni[i], rho)
-            ##!!!!!!!!!!THIS CAN CREATE INSTABILITY!!!!!!!!!
+            ci <- rho.inv.sqrt(ni[i], rho)##this function controls instability in R^{-1/2}
             R.inv.sqrt <- (diag(1, ni[i]) - matrix(ci, ni[i], ni[i])) / sqrt(1 - rho)
           }
           else {
@@ -476,24 +491,30 @@ boostmtree <- function(x,
       ##---------------------------------------------------------
 
       Xnew <- mclapply(1:n, function(i) {
-        rmi <- rho / (1 + (ni[i] - 1) * rho)
+        rmi <- rho.inv(ni[i], rho)##this function controls instability in R^{-1}
         Wi <- diag(1, ni[i]) - matrix(rmi, ni[i], ni[i])
         t(D[[i]]) %*% Wi %*% D[[i]]
       })
       gamma <- lapply(1:Kmax, function(k) {
         pt.k <- (membership == k)
-        ##sum the pseudo y's over a given terminal node
-        YnewSum <- colSums(gm[pt.k,, drop = FALSE])
-        ##sum the pseudo x's over a given terminal node
-        XnewSum <- Reduce("+", lapply(which(pt.k), function(j) {Xnew[[j]]}))
-        ## add penalization
-        XnewSum <- XnewSum + sigma * pen.lsq.matx
-        ## solve using QR
-        qr.obj <- tryCatch({qr.solve(XnewSum, YnewSum)}, error = function(ex){NULL})
-        if (!is.null(qr.obj)) {
-          qr.obj
+        ## the following is only relevant if pt.k is non-NULL (can happen in cv setting)
+        if (sum(pt.k) > 0) {
+          ##sum the pseudo y's over a given terminal node
+          YnewSum <- colSums(gm[pt.k,, drop = FALSE])
+          ##sum the pseudo x's over a given terminal node
+          XnewSum <- Reduce("+", lapply(which(pt.k), function(j) {Xnew[[j]]}))
+          ## add penalization
+          XnewSum <- XnewSum + sigma * pen.lsq.matx
+          ## solve using QR
+          qr.obj <- tryCatch({qr.solve(XnewSum, YnewSum)}, error = function(ex){NULL})
+          if (!is.null(qr.obj)) {
+            qr.obj
+          }
+          else {
+            rep(0, df.D)
+          }
         }
-        else {
+        else {## NULL case
           rep(0, df.D)
         }
       })
@@ -503,7 +524,6 @@ boostmtree <- function(x,
       ## needed for prediction
       ## save as a matrix and include original grow terminal node membership
       ##---------------------------------------------------------
-
       gamma.matx <- matrix(0, Kmax, df.D+1)
       gamma.matx[, 1] <- sort(unique(membership.org))
       gamma.matx[, 2:(df.D+1)] <- matrix(unlist(gamma), ncol = df.D, byrow = TRUE)
@@ -526,9 +546,8 @@ boostmtree <- function(x,
 
       ##---------------------------------------------------------
       ## step 5': vimp
-      ##---------------------------------------------------------
-
-      
+      ## TBD TBD TBD: currently does not work properly
+      ##---------------------------------------------------------      
       if (vimpFlag) {
 
         ## standardize the current beta coefficient: restricted to OOB data
@@ -551,8 +570,7 @@ boostmtree <- function(x,
           l2Dist(Yorg[oob], lapply(1:n.oob, function(i) {D[[oob[i]]] %*% beta.vimp.k[i, ]}))
         })
 
-        ## save the vimp
-        #vimp[m, ] <- 100 * (err.vimp - err.oob) / (Ysd * l2Dist(mu[oob], mu.old[oob]))
+        ## save the *standardized* vimp
         vimp[m, ] <- 100 * (err.vimp - err.oob) / Ysd
         
       }
@@ -563,7 +581,7 @@ boostmtree <- function(x,
     ##############################################################################
     ##
     ##
-    else{ #####FOREST BASE LEARNER ####
+    else{#####FOREST BASE LEARNER ######
     ##
     ##
     #############################################################################
@@ -584,7 +602,7 @@ boostmtree <- function(x,
 
       ## define Xnew
       Xnew <- mclapply(1:n, function(i) {
-        rmi <- rho / (1 + (ni[i] - 1) * rho)
+        rmi <- rho.inv(ni[i], rho)##this function controls instability in R^{-1}
         Wi <- diag(1, ni[i]) - matrix(rmi, ni[i], ni[i])
         t(D[[i]]) %*% Wi %*% D[[i]]
       })
@@ -595,23 +613,26 @@ boostmtree <- function(x,
       bhat <- do.call("cbind", mclapply(1:n, function(i) {
         fwt.i <- forest.wt[i, ]
         fwt.i[fwt.i <= forest.tol] <- 0
-        if (all(fwt.i == 0)) {
-          fwt.i <- forest.wt[i, ]
-        }
-        fwt.i <- fwt.i / sum(fwt.i)
         pt.i <- (fwt.i != 0)
-        ##sum the pseudo y's over non-zero weights: scale by the weights
-        YnewSum <- colSums(fwt.i[pt.i] * gm[pt.i,, drop = FALSE])
-        ##sum the pseudo x's over non-zero weights: scale by the weights
-        XnewSum <- Reduce("+", lapply(which(pt.i), function(j) {fwt.i[j] * Xnew[[j]]}))
-        ## add penalization
-        XnewSum <- XnewSum + sigma * pen.lsq.matx
-        ## solve using QR
-        qr.obj <- tryCatch({qr.solve(XnewSum, YnewSum)}, error = function(ex){NULL})
-        if (!is.null(qr.obj)) {
-          qr.obj
+        ## the following is only relevant if pt.i is non-NULL
+        if (sum(pt.i) > 0) {
+          fwt.i <- fwt.i / sum(fwt.i)
+          ##sum the pseudo y's over non-zero weights: scale by the weights
+          YnewSum <- colSums(fwt.i[pt.i] * gm[pt.i,, drop = FALSE])
+          ##sum the pseudo x's over non-zero weights: scale by the weights
+          XnewSum <- Reduce("+", lapply(which(pt.i), function(j) {fwt.i[j] * Xnew[[j]]}))
+          ## add penalization
+          XnewSum <- XnewSum + sigma * pen.lsq.matx
+          ## solve using QR
+          qr.obj <- tryCatch({qr.solve(XnewSum, YnewSum)}, error = function(ex){NULL})
+          if (!is.null(qr.obj)) {
+            qr.obj
+          }
+          else {
+            rep(0, df.D)
+          }
         }
-        else {
+        else {##NULL case
           rep(0, df.D)
         }
       }))
@@ -619,9 +640,17 @@ boostmtree <- function(x,
       ##---------------------------------------------------------
       ## update beta and  mu
       ##---------------------------------------------------------
-
       beta <- beta + t(bhat * nu.vec)
       mu <- lapply(1:n, function(i) {D[[i]] %*% beta[i, ]})
+
+      ##--------------------------------------------------------------------
+      ## baselearner needs certain objects in predict mode: append them here
+      ##--------------------------------------------------------------------
+      baselearner[[m]] <- c(baselearner[[m]],
+                            list(gm = gm),
+                            list(Xnew = Xnew),
+                            list(pen = sigma * pen.lsq.matx))
+
 
     }
 
@@ -631,60 +660,60 @@ boostmtree <- function(x,
     ##
     #############################################################################
 
+    if (!univariate) {
 
-    ##---------------------------------------------------------
-    ## step 6 and 7: update phi and rho using REML
-    ## we make a call to lme (actually gls since there are no r.eff)
-    ## we use a compound symmetric correlation matrix, but this can be generalized
-    ## note: tm and x are used in the REML call -- although the theory does not call for it
-    ##---------------------------------------------------------
-
-    resid.data <- data.frame(y  = unlist(lapply(1:n, function(i) {Y[[i]] - mu[[i]]})),
-                             x  = x,
-                             tm = unlist(lapply(1:n, function(i) {tm[id == id.unq[i]]})),
-                             id = unlist(lapply(1:n, function(i) {rep(id.unq[i], ni[i])})))
-    gls.obj <- tryCatch({gls(y ~ ., data = resid.data,
-                        correlation = corCompSymm(form = ~ 1 | id))},
-                        error = function(ex){NULL})
-    if (is.null(gls.obj)) {
-      gls.obj <- tryCatch({gls(y ~ 1, data = resid.data,
-                          correlation = corCompSymm(form = ~ 1 | id))},
+      ##---------------------------------------------------------
+      ## step 6 and 7: update phi and rho using REML
+      ## we make a call to lme (actually gls since there are no r.eff)
+      ## we use a compound symmetric correlation matrix, but this can be generalized
+      ## note: tm and x are used in the REML call -- although the theory does not call for it
+      ##---------------------------------------------------------
+      resid.data <- data.frame(y  = unlist(lapply(1:n, function(i) {Y[[i]] - mu[[i]]})),
+                               x,
+                               tm = unlist(lapply(1:n, function(i) {tm[id == id.unq[i]]})),
+                               id = unlist(lapply(1:n, function(i) {rep(id.unq[i], ni[i])})))
+      gls.obj <- tryCatch({gls(y ~ ., data = resid.data,
+                               correlation = corCompSymm(form = ~ 1 | id))},
                           error = function(ex){NULL})
-    }
-    if (!is.null(gls.obj)) {
-      phi <- gls.obj$sigma^2
-      if (rho.fit.flag) {
-        rho <- as.numeric(coef(gls.obj$modelStruct$corStruc, unconstrained = FALSE))
-        rho <- max(min(0.999, rho, na.rm = TRUE), -0.999)
+      if (is.null(gls.obj)) {
+        gls.obj <- tryCatch({gls(y ~ 1, data = resid.data,
+                                 correlation = corCompSymm(form = ~ 1 | id))},
+                            error = function(ex){NULL})
       }
-    }
-
-    phi.vec[m] <- phi * Ysd ^ 2##scale by the overall variance
-    rho.vec[m] <- rho
-
-    if (verbose) {
-      cat("phi   :", phi.vec[m], "\n")
-      cat("rho   :", rho.vec[m], "\n")
-    }
+      if (!is.null(gls.obj)) {
+        phi <- gls.obj$sigma^2
+        if (rho.fit.flag) {
+          rho <- as.numeric(coef(gls.obj$modelStruct$corStruc, unconstrained = FALSE))
+          rho <- max(min(0.999, rho, na.rm = TRUE), -0.999)
+        }
+      }
+      
+      phi.vec[m] <- phi * Ysd ^ 2##scale by the overall variance
+      rho.vec[m] <- rho
+      
+      if (verbose) {
+        cat("phi   :", phi.vec[m], "\n")
+        cat("rho   :", rho.vec[m], "\n")
+      }
     
-    ##---------------------------------------------------------
-    ## step 8: update sigma, save lambda
-    ##---------------------------------------------------------
+    
+      ##---------------------------------------------------------
+      ## step 8: update sigma, save lambda
+      ##---------------------------------------------------------
+      
+      sigma <- lambda * (1 - rho) 
+      lambda.vec[m] <- lambda
+      if (verbose) {
+        cat("lambda:", lambda.vec[m], "\n")
+      }
 
-    sigma <- lambda * (1 - rho) 
-    lambda.vec[m] <- lambda
-    if (verbose) {
-      cat("lambda:", lambda.vec[m], "\n")
     }
-
-
 
   }##end boosting iteration
 
   ##---------------------------------------------------------
   ## rescale by the std and add the Y mean back
   ##---------------------------------------------------------
-
   beta <- beta * Ysd
   beta[, 1] <- beta[, 1] + Ymean
   mu <- lapply(1:n, function(i) {c(mu[[i]] * Ysd + Ymean)})

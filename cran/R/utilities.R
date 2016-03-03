@@ -63,14 +63,6 @@ blup.solve <- function(transf.data, membership, sigma, Kmax) {
           
 }
 
-## constant needed for determining inverse square root
-## of equicorrelation matrix
-const.sqrt <- function(ni, rho) {
-  ri <- rho / (1 + (ni - 1) * rho)
-  as.numeric(Re(polyroot(c(ri, -2, ni))))[1]
-}
-
-
 ## gls mean-squared error
 gls.mse  <- function(f, dta, trn, type = c("corCompSym", "corAR1", "corSymm", "iid")) {
   f <- as.formula(f)
@@ -165,9 +157,9 @@ l2Dist <- function(y1, y2) {
   if (length(y1) != length(y2)) {
     stop("y1 and y2 must have same the length\n")
   }
-  mean(unlist(lapply(1:length(y1), function(i) {
-    sqrt(mean((unlist(y1[[i]]) - unlist(y2[[i]]))^2, na.rm = TRUE))
-  })), na.rm = TRUE)
+  sqrt(mean(unlist(lapply(1:length(y1), function(i) {
+    mean((unlist(y1[[i]]) - unlist(y2[[i]]))^2, na.rm = TRUE)
+  })), na.rm = TRUE))
 }
 
 ## modified lowess
@@ -222,18 +214,23 @@ penBS <- function(d, pen.ord = 2) {
 
 ## B-spline penalty derivative
 penBSderiv <- function(d, pen.ord = 2) {
-  if (d >= (pen.ord + 1)) {
-    pen.matx <- penBS(d, pen.ord)
-    cbind(0, rbind(0, pen.matx))
+  if (d > 0) {
+    if (d >= (pen.ord + 1)) {
+      pen.matx <- penBS(d, pen.ord)
+      cbind(0, rbind(0, pen.matx))
+    }
+    else {
+      warning("not enough degrees of freedom for differencing penalty matrix: setting penalty to zero\n")
+      pen.matx <- diag(1, d + 1)
+      pen.matx[1, 1] <- 0
+      pen.matx
+    }
   }
   else {
-    warning("not enough degrees of freedom for differencing penalty matrix: setting penalty to zero\n")
-    pen.matx <- diag(1, d + 1)
-    pen.matx[1, 1] <- 0
-    pen.matx
+    0
   }
 }
-
+  
 
 ## choose a case at random, plot time profiles for its proximities
 plot.profile.prx <- function(obj, col = NULL, rnd.case = NULL, cut = .95, restrictX = TRUE) {
@@ -300,4 +297,35 @@ plot.profile.prx <- function(obj, col = NULL, rnd.case = NULL, cut = .95, restri
   invisible(obj$boost.obj$x[rnd.match,, drop = FALSE])
   
 }
+
+## constant used in inverse of equicorrelation matrix
+rho.inv <- function(ni, rho, tol = 1e-2) {
+  m <- ni - 1
+  if (m == 0) {
+    0
+  }
+  else if (rho < 0 && abs(rho + 1 / m) <= tol) {
+    (-1 / m + tol) / (m * tol)
+  } 
+  else {
+    rho / (1 + m * rho)
+  }
+}
+
+## constant used in inverse square-root of equicorrelation matrix
+rho.inv.sqrt <- function(ni, rho, tol = 1e-2) {
+  m <- ni - 1
+  if (m == 0) {
+    0
+  }
+  else {
+    if (rho < 0 && abs(rho + 1 / m) <= tol) {
+      rho <- -1 / m + tol
+    }
+    ri <- rho / (1 + m * rho)
+    as.numeric(Re(polyroot(c(ri, -2, ni))))[1]
+  }
+}
+
+
 

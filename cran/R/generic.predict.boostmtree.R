@@ -26,13 +26,13 @@ generic.predict.boostmtree <- function(object,
                                        proximity = FALSE,
                                        verbose = TRUE,
                                        eps = 1e-4,
+                                       forest.tol = 1e-3,
                                        ...)
 {
 
   ##------------------------------------------------------
   ## preliminary checks: all are fatal
   ##------------------------------------------------------
-
   if (missing(object)) {
     stop("object is missing!")
   }
@@ -52,7 +52,6 @@ generic.predict.boostmtree <- function(object,
   ## parse the data: processing/initialization
   ## depends if a partial plot call was initiated
   ##------------------------------------------------------
-
   if (!partial) {## regular call
 
     ## the grow data is used if x is missing
@@ -62,19 +61,25 @@ generic.predict.boostmtree <- function(object,
       n <- nrow(X)
       D <- object$D
       tm <- object$time
-      tm.unq <- sort(unique(unlist(tm)))
+      tm.unq <- sort(unique(unlist(object$time)))
       testFlag <- FALSE
     }
     else {
       ## if x is provided but no other values
       ## we assume id's are 1:1 and swap in the original unique time values
-      ## no y is assumed
       if (!missing(x) && (missing(id) || missing(tm))) {
         X <- x
         n <- nrow(X)
         tm.unq <- sort(unique(unlist(object$time)))
         tm <- lapply(1:n, function(i){tm.unq})
-        testFlag <- FALSE
+        id <- id.unq <- 1:n
+        if (!missing(y)) {
+          Y <- lapply(1:n, function(i) {y[i]})
+          testFlag <- TRUE
+        }
+        else {
+          testFlag <- FALSE
+        }
       }
       ## we now assume all test set information is provided: fails otherwise
       else{
@@ -118,15 +123,14 @@ generic.predict.boostmtree <- function(object,
   ##------------------------------------------------------
   ## construct the test set bspline basis functions
   ##------------------------------------------------------
-
   if (object$d > 0) {
     if (length(tm.unq) > 1) {
       D <- cbind(1, bs(tm.unq, knots = attr(object$D, "knots"),
                        Boundary.knots = attr(object$D, "Boundary.knots"), degree = object$d))
     }
     else {
-          stop("only one unique time point")
-        }
+      stop("only one unique time point")
+    }
   }
   else {
     D <- cbind(rep(1, length(tm.unq)))
@@ -137,7 +141,6 @@ generic.predict.boostmtree <- function(object,
   ## set dimensions
   ## extract values from the object
   ##------------------------------------------------------
-
   ## basic parameters
   if (missing(M)) {
     M <- object$M
@@ -173,8 +176,10 @@ generic.predict.boostmtree <- function(object,
     beta.list <- NULL
   }
 
-  ## vimp
-  vimpFlag <- testFlag && importance
+  
+
+  ## vimp details (TBD TBD TBD VIMP NOT IMPLEMENTED FOR FORESTS)
+  vimpFlag <- testFlag && importance && ntree == 1
   vimp <- NULL
 
   ## proximity
@@ -190,7 +195,7 @@ generic.predict.boostmtree <- function(object,
   ##
   #############################################################################
 
-    ## we make the predict call in parallel for speed
+    ## we make the predict call in parallel in R for speed
     ## to execute a parallel call we must over-ride rf.cores
     ## we must be careful not to over-tax mc.cores
     rf.cores.old <- getOption("rf.cores")
@@ -198,6 +203,11 @@ generic.predict.boostmtree <- function(object,
 
     ## membership from original grow tree
     membership <- mclapply(1:M, function(m) {
+
+      ## verbose output
+      ##if (verbose) {
+      ##  cat("\t-- iteration:", m, "\n")
+      ##}
 
       ## set the rf.cores/mc.cores to minimal values
       options(rf.cores = 0, mc.cores = 1)
@@ -264,7 +274,7 @@ generic.predict.boostmtree <- function(object,
     if (!is.null(rf.cores.old)) options(rf.cores = rf.cores.old)
     if (!is.null(mc.cores.old)) options(mc.cores = mc.cores.old)
 
-    for (m in 1:M) {
+    nullObj <- lapply(1:M, function(m) {
 
       ##---------------------------------------------------------
       ## pass the x-data down the mth tree
@@ -272,25 +282,22 @@ generic.predict.boostmtree <- function(object,
       ## update beta using gamma making use of tnm
       ## rescale by Ysd and add Ymean
       ##---------------------------------------------------------
-
       orgMembership <- gamma[[m]][, 1]
       beta <- t(t(gamma[[m]][match(membership[[m]], orgMembership), -1, drop = FALSE]) * nu.vec) * Ysd
 
       if (m == 1) {
         beta[, 1] <- beta[, 1] + Ymean
-        beta.list[[m]] <- beta
+        beta.list[[m]] <<- beta
       }
       else {
-        beta.list[[m]] <- beta.list[[m-1]] + beta
+        beta.list[[m]] <<- beta.list[[m-1]] + beta
       }
 
       ##---------------------------------------------------------
       ## vimp calculation: update "vimp beta" from the perturbed X
       ##---------------------------------------------------------
-
       if (vimpFlag) {
-
-        beta.vimp[[m]] <- lapply(1:p, function(k) {
+        beta.vimp[[m]] <<- lapply(1:p, function(k) {
           membership.k <- membershipNoise[[m]][((k-1) * n + 1):(k * n)]
           beta.update.k <- t(t(gamma[[m]][match(membership.k, orgMembership), -1, drop = FALSE]) * nu.vec) * Ysd
           if (m == 1) {
@@ -302,30 +309,118 @@ generic.predict.boostmtree <- function(object,
             beta.vimp[[m-1]][[k]] + beta.update.k
           }
         })
-
       }
 
-    }##loop is complete
-
+      
+      NULL
+      
+    })##loop is complete
+    rm(nullObj)
     
   }
 
   ##############################################################################
   ##
   ##
-  else{ #####FOREST BASE LEARNER ####
+  else{#####FOREST BASE LEARNER ####
   ##
   ##
   #############################################################################
 
-    stop("TBD TBD TBD")
+    
+    ##--------------------------------------------------------------
+    ## WE NEED TO REPRODUCE THE WEIGHTED LEAST SQUARES BETA SOLUTION 
+    ## WEIGHTS ARE OBTAINED FROM THE FOREST USING THE TEST DATA
+    ##
+    ## gm        training gradient
+    ## Xnew      training pseudo x matrix
+    ## pen       training penalty matrix
+    ##---------------------------------------------------------
+
+    nullObj <- lapply(1:M, function(m) {
+
+      ##---------------------------------------------------------      
+      ## extract gm, Xnew and pen
+      ##---------------------------------------------------------
+      gm <- baselearner[[m]]$gm
+      Xnew <- baselearner[[m]]$Xnew
+      pen <- baselearner[[m]]$pen
+      
+      ##---------------------------------------------------------
+      ## determine the test set forest weights
+      ##---------------------------------------------------------
+      forest.wt <- predict.rfsrc(baselearner[[m]]$forest,
+                                 newdata = X,
+                                 importance = "none",
+                                 forest.wt = TRUE)$forest.wt
+                      
+      ##---------------------------------------------------------
+      ## iterate over cases i to get bhat; eeliminate cases with small forest weights
+      ##---------------------------------------------------------
+      bhat <- do.call("cbind", mclapply(1:n, function(i) {
+        fwt.i <- forest.wt[i, ]
+        fwt.i[fwt.i <= forest.tol] <- 0
+        pt.i <- (fwt.i != 0)
+        ## the following is only relevant if pt.i is non-NULL
+        if (sum(pt.i) > 0) {
+          fwt.i <- fwt.i / sum(fwt.i)
+          ##sum the pseudo y's over non-zero weights: scale by the weights
+          YnewSum <- colSums(fwt.i[pt.i] * gm[pt.i,, drop = FALSE])
+          ##sum the pseudo x's over non-zero weights: scale by the weights
+          XnewSum <- Reduce("+", lapply(which(pt.i), function(j) {fwt.i[j] * Xnew[[j]]}))
+          ## add penalization
+          XnewSum <- XnewSum + pen
+          ## solve using QR
+          qr.obj <- tryCatch({qr.solve(XnewSum, YnewSum)}, error = function(ex){NULL})
+          if (!is.null(qr.obj)) {
+            qr.obj
+          }
+          else {
+            rep(0, df.D)
+          }
+        }
+        else {##NULL case
+          rep(0, df.D)
+        }
+      }))
+
+      ##---------------------------------------------------------
+      ## update beta
+      ## rescale by Ysd and add Ymean
+      ##---------------------------------------------------------
+      beta <- t(bhat * nu.vec * Ysd)
+      if (m == 1) {
+        beta[, 1] <- beta[, 1] + Ymean
+        beta.list[[m]] <<- beta
+      }
+      else {
+        beta.list[[m]] <<- beta.list[[m-1]] + beta
+      }
+      
+      ##---------------------------------------------------------
+      ## vimp calculation: TBD TBD TBD 
+      ##---------------------------------------------------------
+
+
+      NULL
+
+    })##loop is complete
+    rm(nullObj)
 
   }
+
+  
+  ##############################################################################
+  ##
+  ##  The algorithm is now the same
+  ##
+  ##############################################################################
+
 
   ##---------------------------------------------------------
   ## predicted mu at observed time points
   ##---------------------------------------------------------
-  
+ 
   mu <- mclapply(1:M, function(m) {
     ## extract those mu values corresponding to the observed time points
     ## we allow replicated time measurements for an individual

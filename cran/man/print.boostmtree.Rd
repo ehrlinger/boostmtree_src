@@ -2,7 +2,7 @@
 \alias{print.boostmtree}
 \title{Print Summary Output}
 \description{
-    Print summary output from the boosting analysis.
+  Print summary output from the boosting analysis.
 }
 \usage{\method{print}{boostmtree}(x, ...)}
 \arguments{
@@ -11,10 +11,11 @@
     \item{...}{Further arguments passed to or from other methods.}
 }
 \author{
-    Hemant Ishwaran and Udaya B. Kogalur
+  Hemant Ishwaran, Pande A. and Udaya B. Kogalur
 }
 \references{
-  Ishwaran et al. (2014).  Boosting multivariate trees for
+  Pande A., Li L., Rajeswaran J., Ehrlinger J., Kogalur U.B.,
+  Blackstone E.H., Ishwaran H. (2016).  Boosted multivariate trees for
   longitudinal data.
 }
 \keyword{print}

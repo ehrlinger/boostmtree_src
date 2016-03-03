@@ -31,18 +31,17 @@
   a subset of the data using \code{subset}.
 }
 \author{
-  Hemant Ishwaran and Udaya B. Kogalur
+  Hemant Ishwaran, Pande A. and Udaya B. Kogalur
 }
 \references{
   Friedman J.H. Greedy function approximation: a gradient
   boosting machine, \emph{Ann. of Statist.}, 5:1189-1232, 2001.
 }
 \examples{
-\donttest{
+\dontrun{
 ##------------------------------------------------------------
 ## Synthetic example
-##
-##  high correlation, quadratic time with quadratic interaction
+## high correlation, quadratic time with quadratic interaction
 ##-------------------------------------------------------------
 #simulate the data
 dta <- simLong(n = 50, N = 5, rho =.80, model = 2)$dtaL

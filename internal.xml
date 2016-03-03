@@ -6,7 +6,6 @@
 
 <project name="internal" basedir="." default="..." >
 
-
   <!--
     ========================================================================
     ========================================================================
@@ -48,7 +47,7 @@
       Internal Target:  Customization for Operating System
     ========================================================================
   -->
-  <target name="osPrep" depends="win-8Prep,win-7Prep,linPrep,mac-i386Prep,mac-x86_64Prep,sunPrep" />
+  <target name="osPrep" depends="win-8Prep,win-7Prep,linPrep,mac-i386Prep,mac-x86_64Prep,sunPrep" /> 
 
   <target name="win-8Prep" depends="checkOS" if="isWin-8">
     <property name="sep" value="\"/>
@@ -59,11 +58,10 @@
     <property name="nativeDir" value="win-8"/>
     <property name="archiveType" value="zip"/>
 
-    <property name="Rlib32" value="i386"/>
     <property name="Rlib64" value="x64"/>
 
     <property name="sharedObjectExtension" value=".dll"/>
-
+    
     <echo message="Customization for Windows 8"/>
   </target>
 
@@ -76,11 +74,10 @@
     <property name="nativeDir" value="win-7"/>
     <property name="archiveType" value="zip"/>
 
-    <property name="Rlib32" value="i386"/>
     <property name="Rlib64" value="x64"/>
 
     <property name="sharedObjectExtension" value=".dll"/>
-
+    
     <echo message="Customization for Windows 7"/>
   </target>
 
@@ -107,7 +104,6 @@
     <property name="nativeDir" value="mac-i386"/>
     <property name="archiveType" value="tgz"/>
 
-    <property name="Rlib32" value="i386"/>
     <property name="Rlib64" value="i386"/>
 
     <property name="sharedObjectExtension" value=".so"/>
@@ -124,7 +120,6 @@
     <property name="nativeDir" value="mac-x86_64"/>
     <property name="archiveType" value="tgz"/>
 
-    <property name="Rlib32" value="i386"/>
     <property name="Rlib64" value="x86_64"/>
 
     <property name="sharedObjectExtension" value=".so"/>
@@ -187,26 +182,12 @@
   -->
   <target name="setParallel64" depends="osPrep,set64">
     <property name="openMPcompiler" value="-fopenmp" />
-    <property name="openMPswitch" value="SUPPORT_OPENMP"/>
     <property name="openMPforce" value="HAVE_OPENMP"/>
 
-  </target>
-
-  <target name="setParallel32" depends="osPrep,set32">
-    <property name="openMPcompiler" value="-fopenmp" />
-    <property name="openMPswitch" value="SUPPORT_OPENMP"/>
-    <property name="openMPforce" value="HAVE_OPENMP"/>
   </target>
 
   <target name="setSerial64" depends="osPrep,set64">
     <property name="openMPcompiler" value="" />
-    <property name="openMPswitch" value="UNSUPPORT_OPENMP"/>
-    <property name="openMPforce" value="DO_NOT_HAVE_OPENMP"/>
-  </target>
-
-  <target name="setSerial32" depends="osPrep,set32">
-    <property name="openMPcompiler" value="" />
-    <property name="openMPswitch" value="UNSUPPORT_OPENMP"/>
     <property name="openMPforce" value="DO_NOT_HAVE_OPENMP"/>
   </target>
 
@@ -253,48 +234,6 @@
   <target name="set64sun" depends="checkOS" if="isSun">
   </target>
 
-
-  <!--
-    ========================================================================
-      Internal Target:  Set for 32 bits
-    ========================================================================
-  -->
-  <target name="set32" depends="set32win-8,set32win-7,set32lin,set32mac-i386,set32mac-x86_64,set32sun">
-    <property name="bitSwitch" value="m32" />
-  </target>
-
-  <target name="set32win-8" depends="checkOS" if="isWin-8">
-    <property name="Rarch" value="--arch i386"/>
-    <property name="Rlib" value="${Rlib32}"/>
-    <property name="gnuCC" value="gcc" />
-  </target>
-
-  <target name="set32win-7" depends="checkOS" if="isWin-7">
-    <property name="Rarch" value="--arch i386"/>
-    <property name="Rlib" value="${Rlib32}"/>
-    <property name="gnuCC" value="gcc" />
-  </target>
-
-  <target name="set32lin" depends="checkOS" if="isLinux">
-    <property name="Rarch" value=""/>
-    <property name="Rlib" value=""/>
-    <property name="gnuCC" value="gcc"/>
-  </target>
-
-  <target name="set32mac-i386" depends="checkOS" if="isMac-i386">
-    <property name="Rarch" value=""/>
-    <property name="Rlib" value="${Rlib32}"/>
-    <property name="gnuCC" value="gcc"/>
-  </target>
-
-  <target name="set32mac-x86_64" depends="checkOS" if="isMac-x86_64">
-    <property name="Rarch" value=""/>
-    <property name="Rlib" value="${Rlib32}"/>
-    <property name="gnuCC" value="gcc"/>
-  </target>
-
-  <target name="set32sun" depends="checkOS" if="isSun">
-  </target>
 
 
   <!--

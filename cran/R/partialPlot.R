@@ -14,7 +14,7 @@ partialPlot <- function (obj,
 
   ## determine the desired variables
   if (missing(xvar.names)) {
-    stop("x-variable names were not provided")
+    xvar.names <- colnames(obj$x)
   }
   xvar.names <- intersect(xvar.names, colnames(obj$x))
   if (length(xvar.names) == 0) {
@@ -25,7 +25,7 @@ partialPlot <- function (obj,
   ## what are the desired time values?
   tmOrg <- sort(unique(unlist(obj$time)))
   if (missing(tm)) {
-    tm.q <- quantile(tmOrg, (1:9)/10, na.rm = TRUE)
+    tm.q <- unique(quantile(tmOrg, (1:9)/10, na.rm = TRUE))
     tm.pt <- sapply(tm.q, function(tt) {#assign original time values
       max(which.min(abs(tmOrg - tt)))
     })

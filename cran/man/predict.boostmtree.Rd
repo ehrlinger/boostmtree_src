@@ -2,8 +2,8 @@
 \alias{predict.boostmtree}
 \title{Prediction for Boosted multivariate trees for longitudinal data.}
 \description{
-   Obtain predicted values.  Also returns test-set performance
-   if the test data contains y-outcomes.
+  Obtain predicted values.  Also returns test-set performance
+  if the test data contains y-outcomes.
 }
 \usage{\method{predict}{boostmtree}(object,
  x,
@@ -15,6 +15,7 @@
  proximity = FALSE,
  verbose = TRUE,
  eps = 1e-4,
+ forest.tol = 1e-3,
  ...)
 }
 \arguments{
@@ -22,7 +23,8 @@
   \item{x}{Data frame (or matrix) containing test set x-values.  Rows
     must be duplicated to match the number of time points for an
     individual. If missing, the training x values are used and
-    \code{tm}, \code{id} and \code{y} are not required.}
+    \code{tm}, \code{id} and \code{y} are not required and no
+    performance values are returned.}
   \item{tm}{Time values for each test set individual with one entry for
     each row of \code{x}.  Optional, but if missing, the set of unique time
     values from the training values are used for each individual and no
@@ -30,7 +32,7 @@
   \item{id}{Unique subject identifier, one entry for each row in
     \code{x}.  Optional, but if missing, each individual is assumed to
     have a full time-profile specified by the unique time values from
-    the training data.  No test-set performance values are returned.}
+    the training data.}
   \item{y}{Test set y-values, with one entry for each row  in \code{x}.}
   \item{M}{Fixed value for the boosting step number.  Leave this empty 
     to determine the optimized value obtained by minimizing test-set error.}
@@ -39,11 +41,26 @@
   \item{verbose}{Should verbose output be printed?}
   \item{eps}{Tolerance value used for determing the optimal \code{M}.
     For experts only.}
+  \item{forest.tol}{Tolerance used for forest weighted least squares
+      solution.  Experimental and for experts only.}
   \item{...}{Further arguments passed to or from other methods.}
 }
 \details{
   The predicted time profile and performance values are obtained for
   test data from the boosted object grown on the training data.
+
+  R-side parallel processing is implemented by replacing the R function
+  \command{lapply} with \command{mclapply} found in the \pkg{parallel}
+  package.  You can set the number of cores accessed by
+  \command{mclapply} by issuing the command \command{options(mc.cores =
+  x)}, where \command{x} is the number of cores.  As an example, issuing
+  the following options command uses all available cores:
+  
+  \command{options(mc.cores=detectCores())}
+  
+  However, this can create high RAM usage, especially when using
+  function \command{partialPlot} which calls the \command{predict}
+  function.  
 }
 \value{
      An object of class \code{(boostmtree, predict)}, which is a list with the
@@ -68,10 +85,11 @@
      \item{Mopt}{The optimized \code{M}.}
 }
 \author{
-    Hemant Ishwaran and Udaya B. Kogalur
+  Hemant Ishwaran, Pande A. and Udaya B. Kogalur
 }
 \references{
-  Ishwaran et al. (2014).  Boosting multivariate trees for
+  Pande A., Li L., Rajeswaran J., Ehrlinger J., Kogalur U.B.,
+  Blackstone E.H., Ishwaran H. (2016).  Boosted multivariate trees for
   longitudinal data.
 }
 \seealso{
@@ -79,7 +97,7 @@
   \command{\link{print.boostmtree}}
 }
 \examples{
-\donttest{
+\dontrun{
 ##------------------------------------------------------------
 ## Synthetic example
 ##
