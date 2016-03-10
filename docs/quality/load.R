@@ -25,23 +25,28 @@ if (is.null(build.path)) {
 
 ## Dependency automatically loaded when package is loaded.
 library("randomForestSRC")
+library("splines")
+library("nlme")
+library("parallel")
 
 ###########################################################################
 #  Source files, and load native code object.
 ###########################################################################
 
-source(paste(argh.path, "boostmtree.R", sep=""))
-source(paste(argh.path, "predict.boostmtree.R", sep=""))
-source(paste(argh.path, "generic.predict.boostmtree.R", sep=""))
-source(paste(argh.path, "partialPlot.R", sep=""))
-source(paste(argh.path, "plot.boostmtree.R", sep=""))
-source(paste(argh.path, "print.boostmtree.R", sep=""))
-source(paste(argh.path, "utilities.R", sep=""))
+source(paste(source.path, "boostmtree.R", sep=""))
+source(paste(source.path, "predict.boostmtree.R", sep=""))
+source(paste(source.path, "generic.predict.boostmtree.R", sep=""))
+source(paste(source.path, "partialPlot.R", sep=""))
+source(paste(source.path, "plot.boostmtree.R", sep=""))
+source(paste(source.path, "print.boostmtree.R", sep=""))
+source(paste(source.path, "utilities.R", sep=""))
+source(paste(source.path, "simLong.R", sep=""))
 
 
-source(paste(argh.path, "boostmtree.news.R", sep=""))
-source(paste(argh.path, "zzz.R", sep=""))
+source(paste(source.path, "boostmtree.news.R", sep=""))
+source(paste(source.path, "zzz.R", sep=""))
 
 cat("\n           Version:  _PROJECT_VERSION_ID_ ");
 cat("\n Development Build:  _PROJECT_BUILD_ID_ ");
 cat("\n      Architecture: _PROJECT_ARCH_TYPE_ ");
+cat("\n\n")

@@ -12,8 +12,8 @@ citEntry(entry="Manual",
 	 publisher = "manual",
          year         = year,
          note         = vers,
-         url          = "http://cran.r-project.org/package/_PROJECT_PACKAGE_NAME_/",
-         pdf          = "http://cran.r-project.org/web/packages/_PROJECT_PACKAGE_NAME_/_PROJECT_PACKAGE_NAME_.pdf",
+         url          = "https://cran.r-project.org/package=boostmtree",
+         pdf          = "https://cran.r-project.org/web/packages/boostmtree/boostmtree.pdf",
          textVersion =
          paste("Ishwaran H. and Kogalur U.B. (",year ,"). ",
                titl, ", ", vers, ".", sep=""))

@@ -11,7 +11,7 @@
   <property name="project.version.token" value="_PROJECT_VERSION_ID_"/>
   <property name="project.version" value="1.0.0"/>
   <property name="project.build.token" value="_PROJECT_BUILD_ID_"/>
-  <property name="project.build" value="bld20160305"/>
+  <property name="project.build" value="bld20160310"/>
   <property name="project.pkg.name.token" value="_PROJECT_PACKAGE_NAME_"/>
   <property name="rfsrc.pkg.name.token" value="_RFSRC_PACKAGE_NAME_"/>
 
@@ -85,7 +85,7 @@
   -->
   <target name="setStealth">
     <property name="project.pkg.name"  value="boostmtree.stealth"/>
-    <property name="rfsrc.pkg.name"  value="randomForestSRCstealth"/>
+    <property name="rfsrc.pkg.name"  value="randomForestSRC.stealth"/>
     <property name="logFile" value="boostmtree.log"/>
 
     <property name="mltvariate.r.switch.beg.token" value="## RF_MLTVR_BEG ##" />

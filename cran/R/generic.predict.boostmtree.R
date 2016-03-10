@@ -170,7 +170,7 @@ generic.predict.boostmtree <- function(object,
   ## initialize beta
   if (ntree == 1) {
     beta <- matrix(0, n, df.D)
-    beta.list <-  beta.vimp <- vector("list", M)
+    beta.list <-  beta.vimp <- beta.cov.vimp <- beta.time.vimp <- vector("list", M)
   }
   else {
     beta.list <- NULL
@@ -309,10 +309,24 @@ generic.predict.boostmtree <- function(object,
             beta.vimp[[m-1]][[k]] + beta.update.k
           }
         })
+        ## break vimp into covariate only and covariate-time effects
+        ## applies only if splines are fit
+        if (df.D > 1) {
+          beta.cov.vimp[[m]] <<- lapply(1:p, function(k) {
+            b.c.v <- beta.vimp[[m]][[k]]
+            b.c.v[, -1] <- beta.list[[m]][, -1]
+            b.c.v
+          })
+          beta.time.vimp[[m]] <<- lapply(1:p, function(k) {
+            b.t.v <- beta.vimp[[m]][[k]]
+            b.t.v[, 1] <- beta.list[[m]][, 1]
+            b.t.v
+          })
+        }
       }
 
       
-      NULL
+      NULL##memory saving measure
       
     })##loop is complete
     rm(nullObj)
@@ -475,18 +489,36 @@ generic.predict.boostmtree <- function(object,
   ##---------------------------------------------------------
 
   if (vimpFlag) {
-    vimp <- rep(0, p)
-    vimp <- unlist(mclapply(1:p, function(k) {
-      DbetaT.k <- D %*% t(beta.vimp[[Mopt]][[k]])
-      ## extract those mu values corresponding to the observed time points
-      ## we allow replicated time measurements for an individual
-      ## therefore the match of tm to tm.unq is delicate
-      mu.k <- lapply(1:n, function(i) {
-        DbetaT.k[, i][match(tm[[i]], tm.unq, tm[[i]])]
-      })
-      l2Dist(Y, mu.k) - err.rate[Mopt, "l2"]
-    }))
-    names(vimp) <- xvar.names
+    ## vimp when there is no time effect
+    if (df.D <= 1) {
+      vimp <- unlist(mclapply(1:p, function(k) {
+        DbetaT.k <- D %*% t(beta.vimp[[Mopt]][[k]])
+        mu.k <- lapply(1:n, function(i) {
+          DbetaT.k[, i][match(tm[[i]], tm.unq, tm[[i]])]
+        })
+        l2Dist(Y, mu.k) - err.rate[Mopt, "l2"]
+      }))
+      names(vimp) <- xvar.names
+    }
+    ## break vimp into covariate and covariate-time effects
+    if (df.D > 1) {
+      vimp.cov <- unlist(mclapply(1:p, function(k) {
+        DbetaT.k <- D %*% t(beta.cov.vimp[[Mopt]][[k]])
+        mu.k <- lapply(1:n, function(i) {
+          DbetaT.k[, i][match(tm[[i]], tm.unq, tm[[i]])]
+        })
+        l2Dist(Y, mu.k) - err.rate[Mopt, "l2"]
+      }))
+      vimp.time <- unlist(mclapply(1:p, function(k) {
+        DbetaT.k <- D %*% t(beta.time.vimp[[Mopt]][[k]])
+        mu.k <- lapply(1:n, function(i) {
+          DbetaT.k[, i][match(tm[[i]], tm.unq, tm[[i]])]
+        })
+        l2Dist(Y, mu.k) - err.rate[Mopt, "l2"]
+      }))
+      vimp <- c(vimp.cov, vimp.time)
+      names(vimp) <- c(xvar.names, paste(xvar.names, "time", sep=":"))
+    }
   }
 
   ##---------------------------------------------------------
