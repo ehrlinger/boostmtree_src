@@ -4,7 +4,7 @@
 <!-- RF-SRC Benchmark Suite     Apache Ant version 1.8.0   -->
 <!-- ===================================================== -->
 
-<project name="BOOSTMTREE Benchmark Suite" basedir="." default="bench-suite-build">
+<project name="BOOSTMTREE Benchmark Suite" basedir="." default="suite-build">
 
   <property name="project.name" value="BOOSTMTREE Benchmark Suite"/>
   <property name="project.version" value="_PROJECT_VERSION_ID_"/>
@@ -74,10 +74,10 @@
 
  <!--
     ========================================================================
-      Internal target, bench-suite-generic
+      Internal target, suite-generic
     ========================================================================
   -->
-  <target name="bench-suite-generic" depends="internal.isRarchSet">
+  <target name="suite-generic" depends="internal.isRarchSet">
 
     <echo message="Benchmark Target Initiated with"/>
     <echo message="  -use.package=${packageUse}"/>
@@ -108,10 +108,10 @@ ${scriptFileExitLine}
 
  <!--
     ========================================================================
-      Internal target, bench-examples-generic
+      Internal target, examples-generic
     ========================================================================
   -->
-  <target name="bench-examples-generic" depends="internal.isRarchSet">
+  <target name="examples-generic" depends="internal.isRarchSet">
 
     <echo message="Benchmark Target Initiated with"/>
     <echo message="  -use.package=${packageUse}"/>
@@ -148,31 +148,31 @@ ${scriptFileExitLine}
 
  <!--
     ========================================================================
-      BENCH-SUITE-PACKAGE-XX target, Entry Point
+      SUITE-PACKAGE-XX target, Entry Point
     ========================================================================
   -->
-  <target name="bench-suite-package" depends="setBuildTree,internal.osPrep,internal.set64,setUpdateBenchmarkFalse,setPackageUseTrue,bench-suite-generic"/>
+  <target name="suite-package" depends="setBuildTree,internal.osPrep,internal.set64,setUpdateBenchmarkFalse,setPackageUseTrue,suite-generic"/>
 
  <!--
     ========================================================================
-      BENCH-SUITE-BUILD-XX target, Entry Point
+      SUITE-BUILD-XX target, Entry Point
     ========================================================================
   -->
-  <target name="bench-suite-build" depends="setBuildTree,internal.osPrep,internal.set64,setUpdateBenchmarkFalse,setPackageUseFalse,bench-suite-generic"/>
+  <target name="suite-build" depends="setBuildTree,internal.osPrep,internal.set64,setUpdateBenchmarkFalse,setPackageUseFalse,suite-generic"/>
 
   <!--
     ========================================================================
-      BENCH-EXAMPLES-PACKAGE-XX target, Entry Point
+      EXAMPLES-PACKAGE-XX target, Entry Point
     ========================================================================
   -->
-  <target name="bench-examples-package"    depends="setBuildTree,internal.osPrep,internal.set64,setUpdateBenchmarkFalse,setPackageUseTrue,bench-examples-generic"/>
+  <target name="examples"    depends="setBuildTree,internal.osPrep,internal.set64,setUpdateBenchmarkFalse,setPackageUseTrue,examples-generic"/>
 
   <!--
     ========================================================================
-      BENCH-SUITE-UPDATE-XX target, Entry Point
+      SUITE-UPDATE-XX target, Entry Point
     ========================================================================
   -->
-  <target name="bench-suite-update"  depends="setBuildTree,internal.osPrep,internal.set64,setUpdateBenchmarkTrue,setPackageUseFalse,bench-suite-generic"/>
+  <target name="suite-update"  depends="setBuildTree,internal.osPrep,internal.set64,setUpdateBenchmarkTrue,setPackageUseFalse,suite-generic"/>
 
 
   <!--
@@ -184,17 +184,17 @@ ${scriptFileExitLine}
     <echo message=""/>
     <echo message=" Available targets are:"/>
     <echo message=""/>
-    <echo message=" bench-suite-package"/>
+    <echo message=" suite-package"/>
     <echo message="     --> run the benchmark suite tests in 64-bit mode on the CRAN package"/>
     <echo message=""/>
-    <echo message=" bench-examples-package"/>
+    <echo message=" examples"/>
     <echo message="     --> run the benchmark Rd tests in 64-bit mode on the CRAN package"/>
     <echo message=""/>
-    <echo message=" bench-suite-build"/>
+    <echo message=" suite-build"/>
     <echo message="     --> run the benchmark suite tests in 64-bit mode on the build"/>
     <echo message="     --> *** DEFAULT TARGET ***"/>
     <echo message=""/>
-    <echo message=" bench-suite-update"/>
+    <echo message=" suite-update"/>
     <echo message="     --> update the benchmark suite tests in 64-bit mode on the build"/>
     <echo message=""/>
 

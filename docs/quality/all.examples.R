@@ -1,6 +1,5 @@
 source("header.R")
 
-
 lsp <- function(package, all.names = FALSE, pattern) 
 {
   package <- deparse(substitute(package))
@@ -10,7 +9,6 @@ lsp <- function(package, all.names = FALSE, pattern)
       pattern = pattern
   )
 }
-
 
 run.example <- function(topic) {
   eval(parse(text=paste("example(", topic, ", echo = FALSE, ask = FALSE, run.dontrun = TRUE)", sep="")))
@@ -23,11 +21,12 @@ if (TRUE) {
 
   all.names <- lsp(_PROJECT_PACKAGE_NAME_)
 
-  for (i in 1:length(lsp)) {
+  for (i in 1:length(all.names)) {
     
     sink(paste(output.path, "all.examples.txt", sep=""), append=TRUE)
     cat("Executing", all.names[i], "() ...", "\n\n")
     sink()
+    cat("Executing", all.names[i], "() ...", "\n\n")
     run.example(eval(all.names[i]))
     cat("\n\n\n\n\n")
   

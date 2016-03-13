@@ -13,7 +13,8 @@ export(boostmtree,
        plot.boostmtree,
        print.boostmtree,
        partialPlot,
-       simLong)
+       simLong,
+       boostmtree.news)
 
 S3method(print, boostmtree)
 S3method(plot, boostmtree)
