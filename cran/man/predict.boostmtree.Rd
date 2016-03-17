@@ -136,8 +136,8 @@ pred.2 <- predict(grow.2,
    dtaL$features[-trn, ], dtaL$time[-trn], dtaL$id[-trn], dtaL$y[-trn])
 
 ##mse values
-cat("true model        :", boostmtree:::gls.mse(f.true,dta,trn),"\n")
-cat("linear GLS        :", boostmtree:::gls.mse(f.linr,dta,trn),"\n")
+cat("true model        :", _PROJECT_PACKAGE_NAME_:::gls.mse(f.true,dta,trn),"\n")
+cat("linear GLS        :", _PROJECT_PACKAGE_NAME_:::gls.mse(f.linr,dta,trn),"\n")
 cat("boostmtree        :", pred.1$mse,"\n")
 cat("boostmtree (rho=0):", pred.2$mse,"\n")
 
