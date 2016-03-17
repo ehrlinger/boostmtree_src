@@ -23,6 +23,9 @@ if (TRUE) {
 
   for (i in 1:length(all.names)) {
     
+    ## Example of filtering on an example:
+    ## if (all.names[i] == "predict.boostmtree") {
+
     sink(paste(output.path, "all.examples.txt", sep=""), append=TRUE)
     cat("Executing", all.names[i], "() ...", "\n\n")
     sink()
@@ -30,6 +33,20 @@ if (TRUE) {
     run.example(eval(all.names[i]))
     cat("\n\n\n\n\n")
   
+  }
+}
+
+## Target data Rd files:
+if (TRUE) {
+
+  all.data.names <- c("spirometry")
+
+  for (i in 1:length(all.data.names)) {
+    sink(paste(output.path, "all.examples.txt", sep=""), append=TRUE)
+    cat("Executing", all.data.names[i], "() ...", "\n\n")
+    sink()
+    run.example(eval(all.data.names[i]))
+    cat("\n\n\n\n\n")
   }
 }
 
