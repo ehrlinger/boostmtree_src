@@ -3,7 +3,7 @@ simLong <- function(n = 100,
                      N = 5,
                      rho = 0.8,
                      type = c("corCompSym", "corAR1", "corSymm", "iid"),
-                     model = c(1, 2, 3),
+                     model = c(0, 1, 2, 3),
                      phi = 1,
                      q = 0,
                      ...)
@@ -13,7 +13,7 @@ simLong <- function(n = 100,
   type <- match.arg(type, c("corCompSym", "corAR1", "corSymm", "iid"))
 
   ## determine  the requested simulation
-  model <- as.numeric(match.arg(as.character(model), as.character(1:3)))
+  model <- as.numeric(match.arg(as.character(model), as.character(0:3)))
 
   ## make the data, store as data frame
   dta <- data.frame(do.call("rbind", lapply(1:(n+ntest), function(i) {
@@ -59,6 +59,10 @@ simLong <- function(n = 100,
     tm <- sample((1:(3 * N))/N, size = Ni, replace = TRUE)
 
     ## simulate the y-values
+    ## main effects only
+    if (model == 0) {
+      y <- 1.5 + 2.5 * x1 - 1.2 * x3 - .6 * x4 + eps
+    }
     ## linear time effect
     if (model == 1) {
       y <- 1.5 + 2.5 * x1 - 1.2 * x3 - .2 * x4 - .65 * tm  * x2   + eps
@@ -83,6 +87,9 @@ simLong <- function(n = 100,
   dtaL <- list(features = dta[, 1:d], time = dta$time, id = dta$id, y = dta$y) 
 
   ## identify the true formula
+  if (model == 0) {
+    f.true <- "y ~ x1 + x3 + x4"
+  }
   if (model == 1) {
     f.true <- "y ~ x1 + x3 + x4 + I(time * x2)"
   }

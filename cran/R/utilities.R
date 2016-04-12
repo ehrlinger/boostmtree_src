@@ -105,6 +105,31 @@ is.hidden.bootstrap <-  function (user.option) {
 
 }
 
+## hidden CVlambda
+is.hidden.CVlambda <-  function (user.option) {
+
+  if (is.null(user.option$CVlambda)) {
+    FALSE
+  }
+  else {
+    user.option$CVlambda
+  }
+
+}
+
+## hidden CVrho
+is.hidden.CVrho <-  function (user.option) {
+
+  if (is.null(user.option$CVrho)) {
+    TRUE
+  }
+  else {
+    user.option$CVrho
+  }
+
+}
+
+
 ## hidden ntree value
 is.hidden.ntree <-  function (user.option) {
 
@@ -160,6 +185,18 @@ l2Dist <- function(y1, y2) {
   sqrt(mean(unlist(lapply(1:length(y1), function(i) {
     mean((unlist(y1[[i]]) - unlist(y2[[i]]))^2, na.rm = TRUE)
   })), na.rm = TRUE))
+}
+
+## line plot where x and y are lists of the same length
+line.plot <- function(x, y, ...) {
+
+#  n <- length(x)
+#  o <- lapply(1:n, function(i) {
+#    lines(x[[i]], y[[i]], col = "gray", lty = 2)
+#  })
+
+  mapply(lines, x, y = y, col = "gray", lty = 2)
+  
 }
 
 ## modified lowess
@@ -298,6 +335,18 @@ plot.profile.prx <- function(obj, col = NULL, rnd.case = NULL, cut = .95, restri
   
 }
 
+## point plot where x and y are lists of the same length
+point.plot <- function(x, y, ...) {
+
+#  n <- length(x)
+#  o <- lapply(1:n, function(i) {
+#    points(x[[i]], y[[i]], pch = 16)
+#  })
+  
+  mapply(points, x, y = y, pch = 16)
+  
+}
+
 ## constant used in inverse of equicorrelation matrix
 rho.inv <- function(ni, rho, tol = 1e-2) {
   m <- ni - 1
@@ -327,5 +376,12 @@ rho.inv.sqrt <- function(ni, rho, tol = 1e-2) {
   }
 }
 
+## robust sigma function for numerical stability when penalizing
+sigma.robust <- function(lambda, rho) {
 
+  ## this is the real value  lamda * (1 - rho)
+  ## this is what we return
 
+  lambda
+  
+}

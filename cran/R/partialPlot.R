@@ -50,7 +50,7 @@ partialPlot <- function (obj,
     newx <- obj$x
     rObj <- t(sapply(x.unq, function(xu) {
       newx[, nm] <- rep(xu, nrow(newx))
-      mu <- predict(obj, x = newx, tm = tmOrg, partial = TRUE)$mu
+      mu <- predict(obj, x = newx, tm = tmOrg, partial = TRUE, ...)$mu
       mn.x <- colMeans(do.call(rbind, lapply(mu, function(mm) {mm[tm.pt]})))
       c(xu, mn.x)
     }))
