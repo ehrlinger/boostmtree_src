@@ -7,12 +7,15 @@ CHANGES TO RELEASE _PROJECT_VERSION_ID_
 ---------------------------------------------------------------------------------
 RELEASE _PROJECT_VERSION_ID_
 ---------------------------------------------------------------------------------
+Synchronization with package dependency in randomForestSRC (1.5.0) due to
+minor change in membership output protocols.
+
+RELEASE 1.1.0
+---------------------------------------------------------------------------------
 This update includes an "in sample" cross-validation method for
 determining the optimal boosting iteration.  See the help file of
 boostmtree for more details.  Various bugs and fixes are also addressed.
 
-  
----------------------------------------------------------------------------------
 RELEASE 1.0.0
 ---------------------------------------------------------------------------------
 Please report bugs to ubk@kogalur.com

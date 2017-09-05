@@ -63,8 +63,8 @@ blup.solve <- function(transf.data, membership, sigma, Kmax) {
           
 }
 
-## gls mean-squared error
-gls.mse  <- function(f, dta, trn, type = c("corCompSym", "corAR1", "corSymm", "iid")) {
+## gls standardized root-mean-squared error
+gls.rmse  <- function(f, dta, trn, type = c("corCompSym", "corAR1", "corSymm", "iid")) {
   f <- as.formula(f)
   type <- match.arg(type, c("corCompSym", "corAR1", "corSymm", "iid"))
     gls.grow <- tryCatch({
@@ -85,7 +85,11 @@ gls.mse  <- function(f, dta, trn, type = c("corCompSym", "corAR1", "corSymm", "i
     gls.pred  <- tapply(model.matrix(f, dta[-trn,]) %*% gls.grow$coef,
                         dta[-trn, "id"], function(x) {x})
     y.test <- tapply(dta[-trn, "y"], dta[-trn, "id"], function(x) {x})
-    l2Dist(gls.pred, y.test)
+    ysd <- sd(dta[trn, "y"], na.rm = TRUE)
+    if (ysd < 1e-6) {
+      ysd <- 1
+    }
+    l2Dist(gls.pred, y.test) / ysd
   }
   else {
     NA
@@ -158,7 +162,7 @@ is.hidden.partial <-  function (user.option) {
 is.hidden.rho <-  function (user.option) {
 
   if (is.null(user.option$rho)) {
-    TRUE
+    NULL
   }
   else {
     user.option$rho

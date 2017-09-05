@@ -6,20 +6,18 @@ predict.boostmtree <-
            y,
            M,
            importance = TRUE,
-           verbose = TRUE,
            eps = 1e-5,
            ...)
 {
 
-
+  ## call generic predict 
   result.predict <- generic.predict.boostmtree(object = object,
-                                               x = x,
-                                               tm = tm,
-                                               id = id,
-                                               y = y,
-                                               M = M,
+                                               x,
+                                               tm,
+                                               id,
+                                               y,
+                                               M,
                                                importance = importance,
-                                               verbose = verbose,
                                                eps = eps,
                                                ...)
 
