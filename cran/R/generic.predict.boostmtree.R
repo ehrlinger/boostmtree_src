@@ -37,6 +37,16 @@ generic.predict.boostmtree <- function(object,
   }
 
   ##------------------------------------------------------
+  ## custom mclapply/lapply switch
+  ##------------------------------------------------------
+  if (grepl("Debian", Sys.info()["version"])) {
+    papply <- lapply
+  }
+  else {
+    papply <- mclapply
+  }
+
+  ##------------------------------------------------------
   ## check if this is a partial plot call
   ##------------------------------------------------------
   user.option <- match.call(expand.dots = TRUE)
@@ -199,7 +209,7 @@ generic.predict.boostmtree <- function(object,
     ## pass the x-data down the mth tree
     ## acquire terminal node membership (tnm)
     ##---------------------------------------------------------
-    membership <- mclapply(1:M, function(m) {
+    membership <- papply(1:M, function(m) {
 
       ## verbose output
       ##if (verbose) {
@@ -287,7 +297,7 @@ generic.predict.boostmtree <- function(object,
     ##
     ##---------------------------------------------------------
     if (vimpFlag) {
-      membershipNoise <- mclapply(1:Mopt, function(m) {
+      membershipNoise <- papply(1:Mopt, function(m) {
 
         Xnoise <- do.call(rbind, lapply(1:p, function(k) {
           X.k <- X
@@ -427,7 +437,7 @@ generic.predict.boostmtree <- function(object,
       ##---------------------------------------------------------
       ## iterate over cases i to get beta; eliminate cases with small forest weights
       ##---------------------------------------------------------
-      beta.m.org <- do.call("cbind", mclapply(1:n, function(i) {
+      beta.m.org <- do.call("cbind", papply(1:n, function(i) {
         fwt.i <- forest.wt[i, ]
         fwt.i[fwt.i <= forest.tol] <- 0
         pt.i <- (fwt.i != 0)
@@ -548,7 +558,7 @@ generic.predict.boostmtree <- function(object,
   if (vimpFlag) {
     ## vimp when there is no time effect
     if (df.D <= 1) {
-      vimp <- unlist(mclapply(1:p, function(k) {
+      vimp <- unlist(papply(1:p, function(k) {
         DbetaT.k <- D %*% t(beta.vimp[[k]])
         mu.k <- lapply(1:n, function(i) {
           DbetaT.k[, i][match(tm[[i]], tm.unq, tm[[i]])]
@@ -559,14 +569,14 @@ generic.predict.boostmtree <- function(object,
     }
     ## break vimp into covariate and covariate-time effects
     if (df.D > 1) {
-      vimp.cov <- unlist(mclapply(1:p, function(k) {
+      vimp.cov <- unlist(papply(1:p, function(k) {
         DbetaT.k <- D %*% t(beta.cov.vimp[[k]])
         mu.k <- lapply(1:n, function(i) {
           DbetaT.k[, i][match(tm[[i]], tm.unq, tm[[i]])]
         })
         l2Dist(Y, mu.k) - err.rate[Mopt, "l2"]
       }))
-      vimp.cov.time <- unlist(mclapply(1:p, function(k) {
+      vimp.cov.time <- unlist(papply(1:p, function(k) {
         DbetaT.k <- D %*% t(beta.time.vimp[[k]])
         mu.k <- lapply(1:n, function(i) {
           DbetaT.k[, i][match(tm[[i]], tm.unq, tm[[i]])]

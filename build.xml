@@ -9,9 +9,9 @@
   <!-- Generic project properties -->
   <property name="project.name" value="BOOSTMTREE Build Suite"/>
   <property name="project.version.token" value="_PROJECT_VERSION_ID_"/>
-  <property name="project.version" value="1.2.0"/>
+  <property name="project.version" value="1.2.1"/>
   <property name="project.build.token" value="_PROJECT_BUILD_ID_"/>
-  <property name="project.build" value="bld20170903"/>
+  <property name="project.build" value="bld20180213"/>
   <property name="project.pkg.name.token" value="_PROJECT_PACKAGE_NAME_"/>
   <property name="rfsrc.pkg.name.token" value="_RFSRC_PACKAGE_NAME_"/>
 

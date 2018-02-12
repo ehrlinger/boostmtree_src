@@ -22,6 +22,16 @@ boostmtree <- function(x,
 {
   
   ##------------------------------------------------------
+  ## custom mclapply/lapply switch
+  ##------------------------------------------------------
+  if (grepl("Debian", Sys.info()["version"])) {
+    papply <- lapply
+  }
+  else {
+    papply <- mclapply
+  }
+
+  ##------------------------------------------------------
   ## is this a univariate setting?
   ## if so, flag it and make a zero time vector
   ## we also set d < 0 to trigger no time-covariate fitting
@@ -468,7 +478,7 @@ boostmtree <- function(x,
         ## transform the X, Y, Z values
         ## ---------------------------------------------------------
 
-        transf.data <- mclapply(1:n, function(i) {
+        transf.data <- papply(1:n, function(i) {
           if (ni[i] > 1) {
             ci <- rho.inv.sqrt(ni[i], rho)##this function controls instability in R^{-1/2}
             R.inv.sqrt <- (diag(1, ni[i]) - matrix(ci, ni[i], ni[i])) / sqrt(1 - rho)
@@ -547,7 +557,7 @@ boostmtree <- function(x,
       ## gamma     weighted least squares solution
       ##---------------------------------------------------------
 
-      Xnew <- mclapply(1:n, function(i) {
+      Xnew <- papply(1:n, function(i) {
         rmi <- rho.inv(ni[i], rho)##this function controls instability in R^{-1}
         Wi <- diag(1, ni[i]) - matrix(rmi, ni[i], ni[i])
         t(D[[i]]) %*% Wi %*% D[[i]]
@@ -701,7 +711,7 @@ boostmtree <- function(x,
       forest.wt <- rfsrc.obj$forest.wt
 
       ## define Xnew
-      Xnew <- mclapply(1:n, function(i) {
+      Xnew <- papply(1:n, function(i) {
         rmi <- rho.inv(ni[i], rho)##this function controls instability in R^{-1}
         Wi <- diag(1, ni[i]) - matrix(rmi, ni[i], ni[i])
         t(D[[i]]) %*% Wi %*% D[[i]]
@@ -710,7 +720,7 @@ boostmtree <- function(x,
       ## iterate over cases i to get bhat
       ## for speed we eliminate cases with small forest weights
 
-      bhat <- do.call("cbind", mclapply(1:n, function(i) {
+      bhat <- do.call("cbind", papply(1:n, function(i) {
         fwt.i <- forest.wt[i, ]
         fwt.i[fwt.i <= forest.tol] <- 0
         pt.i <- (fwt.i != 0)

@@ -7,6 +7,10 @@ CHANGES TO RELEASE _PROJECT_VERSION_ID_
 ---------------------------------------------------------------------------------
 RELEASE _PROJECT_VERSION_ID_
 ---------------------------------------------------------------------------------
+Fix to avoid mclapply on Debian, and to default to lapply instead.
+
+RELEASE 1.2.0
+---------------------------------------------------------------------------------
 Synchronization with package dependency in randomForestSRC (1.5.0) due to
 minor change in membership output protocols.
 
