@@ -40,18 +40,6 @@ if (update.benchmark == "TRUE") {
   update.benchmark = FALSE
 }
 
-stealth.flag = gsub("-stealth.flag=","",grep("-stealth.flag=",commandArgs(),value=T));
-
-if ( length(stealth.flag) == 0) {
-  stealth.flag = FALSE
-}
-if (stealth.flag == "TRUE") {
-  stealth.flag = TRUE
-} else {
-  stealth.flag = FALSE
-}
-
 cat("\n use.package = ",      use.package, "\n")
 cat("\n update.benchmark = ", update.benchmark, "\n")
-cat("\n stealth.flag = ",     stealth.flag, "\n")
 

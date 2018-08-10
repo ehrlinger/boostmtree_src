@@ -3,16 +3,14 @@ partialPlot <- function (obj,
                          tm,
                          npts = 25,
                          subset,
+                         conditional.xvars = NULL,
+                         conditional.values = NULL,
                          plot.it = TRUE,
                          ...)
 {
-
-  ## check that object is interpretable
   if (sum(inherits(obj, c("boostmtree", "grow"), TRUE) == c(1, 2)) != 2) {
     stop("this function only works for objects of class `(boostmtree, grow)'")
   }
-
-  ## determine the desired variables
   if (missing(xvar.names)) {
     xvar.names <- colnames(obj$x)
   }
@@ -22,7 +20,20 @@ partialPlot <- function (obj,
   }
   n.xvar <- length(xvar.names)
 
-  ## what are the desired time values?
+  if ( !is.null(conditional.xvars) && !is.null(conditional.values) ) {
+    if (length(conditional.xvars) != length(conditional.values)) {
+      stop("conditional x-variable and conditional value vectors are not of same length")
+    }
+    for (i in 1:length(conditional.xvars)) {
+      if( is.factor(obj$x[,conditional.xvars[i] ])){
+      xuniq <- unique(obj$x[,conditional.xvars[i] ])
+      if ( !any(xuniq == conditional.values[i] )  ) {
+        stop("conditional value for the conditional variable:", conditional.xvars[i], " is not from the original data.")
+      }
+     }
+    }
+  }
+
   tmOrg <- sort(unique(unlist(obj$time)))
   if (missing(tm)) {
     tm.q <- unique(quantile(tmOrg, (1:9)/10, na.rm = TRUE))
@@ -36,13 +47,22 @@ partialPlot <- function (obj,
     })
   }
   n.tm <- length(tm.pt)
-
-  ## has the user asked to subset the data?
   if (!missing(subset)) {
     obj$x <- obj$x[subset,, drop = FALSE]
   }
 
-  ## iterate over the variables, obtained the partial plot values for the desired time points
+  if( !is.null(conditional.xvars) && !is.null(conditional.values) ){
+    n.cond.xvar <- length(conditional.xvars)
+    for(i in 1:n.cond.xvar){
+      if(is.factor(obj$x[, conditional.xvars[i]  ])){
+      obj$x[, conditional.xvars[i]  ] <- as.factor(conditional.values[i])
+      }else
+        {
+          obj$x[, conditional.xvars[i]  ] <- conditional.values[i]
+      }
+    }
+  }
+
   p.obj <- lapply(xvar.names, function(nm) {
     x <- obj$x[, nm]
     n.x <- length(unique(x))
@@ -58,9 +78,6 @@ partialPlot <- function (obj,
     rObj
   })
   names(p.obj) <- xvar.names
-
-
-  ## create the lowess plot object
   l.obj <- lapply(p.obj, function(pp) {
     x <- pp[, 1]
     y <- apply(pp[, -1, drop = FALSE], 2, function(yy) {
@@ -70,14 +87,8 @@ partialPlot <- function (obj,
     rObj
   })
   names(l.obj) <- xvar.names
-
-  ## plot-it?
   if (plot.it) {
-  
-    ## save the original graphical layout
-    def.par <- par(no.readonly = TRUE) 
-    
-    ## iterate over the variables, plot the parital plot for the desired time points
+    def.par <- par(no.readonly = TRUE)
     for (k in 1:n.xvar) {
       plot(range(l.obj[[k]][, 1]), range(l.obj[[k]][, -1]), type = "n",
            xlab = xvar.names[k], ylab = "predicted y (adjusted)")
@@ -85,13 +96,11 @@ partialPlot <- function (obj,
         lines(l.obj[[k]][, 1], l.obj[[k]][, -1, drop = FALSE][, l], type = "l", col = 1)
       }
     }
-
-    ## reset layout
     par(def.par)
-
   }
-
-  ## return the lowess object for the user to create their own plots
   return(invisible(list(p.obj = p.obj, l.obj = l.obj, time = tmOrg[tm.pt])))
-    
 }
+
+
+
+

@@ -9,7 +9,6 @@
   <property name="project.name" value="BOOSTMTREE Benchmark Suite"/>
   <property name="project.version" value="_PROJECT_VERSION_ID_"/>
   <property name="project.build" value="_PROJECT_BUILD_ID_"/>
-  <property name="stealth.flag" value="RF_STLTH_FLAG"/>
 
   <!-- Generic project properties -->
   <property name="logFile" value="benchmark.log"/>
@@ -82,7 +81,6 @@
     <echo message="Benchmark Target Initiated with"/>
     <echo message="  -use.package=${packageUse}"/>
     <echo message="  -update.benchmark=${updateBenchmark}"/>
-    <echo message="  -stealth.flag=${stealth.flag}"/>
     <echo message=""/>
 
     <echo file="${qacDir}/test${scriptExtension}" append="false">${scriptFileCommentLine}
@@ -94,8 +92,7 @@ ${scriptFileExitLine}
     <exec dir="${qacDir}" executable="R" failonerror="TRUE">
       <arg line="${Rarch} CMD BATCH --no-restore --no-save "/>
       <arg line="-use.package=${packageUse}
-                 -update.benchmark=${updateBenchmark}
-                 -stealth.flag=${stealth.flag} test.R"/>
+                 -update.benchmark=${updateBenchmark} test.R"/>
       
       <arg line="output${sep}${logFile}"/>
     </exec>
@@ -116,7 +113,6 @@ ${scriptFileExitLine}
     <echo message="Benchmark Target Initiated with"/>
     <echo message="  -use.package=${packageUse}"/>
     <echo message="  -update.benchmark=${updateBenchmark}"/>
-    <echo message="  -stealth.flag=${stealth.flag}"/>
     <echo message=""/>
 
     <echo file="${qacDir}/all.examples${scriptExtension}" append="false">${scriptFileCommentLine}
@@ -128,8 +124,7 @@ ${scriptFileExitLine}
     <exec dir="${qacDir}" executable="R" failonerror="TRUE">
       <arg line="${Rarch} CMD BATCH --no-restore --no-save"/>
       <arg line="-use.package=${packageUse}
-                 -update.benchmark=${updateBenchmark}
-                 -stealth.flag=${stealth.flag} all.examples.R"/>
+                 -update.benchmark=${updateBenchmark} all.examples.R"/>
       <arg line="output${sep}${logFile}"/>
     </exec>
     <echo message="    all.examples.txt"/>

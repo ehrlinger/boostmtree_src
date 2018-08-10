@@ -8,6 +8,14 @@ CHANGES TO RELEASE _PROJECT_VERSION_ID_
 RELEASE _PROJECT_VERSION_ID_
 ---------------------------------------------------------------------------------
 Fix to avoid mclapply on Debian, and to default to lapply instead.
+The in-sample CV now only uses out of bag data rather than the
+previous version which was using n-1 observations.  Variable
+importance (VIMP) is calculated using the out of bag data in the grow
+mode.  The name of the function vimp.plot has been replaced with
+vimpPlot.  NULL values encountered in the mclapply function have been
+fixed.  The marginalPlot function is new.  It is similar to the
+partial plot except that it provide unadjusted predicted y values.
+  
 
 RELEASE 1.2.0
 ---------------------------------------------------------------------------------
