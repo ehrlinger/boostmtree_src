@@ -20,6 +20,20 @@ boostmtree <- function(x,
                        mod.grad = TRUE,
                        ...)
 {
+
+    ##------------------------------------------------------
+    ## custom mclapply/lapply switch
+    ##------------------------------------------------------
+    if (grepl("Debian", Sys.info()["sysname"])) {
+        papply <- lapply
+    }
+    else if (grepl("Windows", Sys.info()["sysname"])) {
+        papply <- lapply
+    }
+    else {
+        papply <- mclapply
+    }
+    
   univariate <- FALSE
   if (missing(tm)) {
     id <- 1:nrow(x)
