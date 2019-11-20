@@ -41,7 +41,9 @@ source(paste(source.path, "plot.boostmtree.R", sep=""))
 source(paste(source.path, "print.boostmtree.R", sep=""))
 source(paste(source.path, "utilities.R", sep=""))
 source(paste(source.path, "simLong.R", sep=""))
-
+source(paste(source.path, "vimp.boostmtree.R", sep=""))
+source(paste(source.path, "marginalPlot.R", sep=""))
+source(paste(source.path, "vimpPlot.R", sep=""))
 
 source(paste(source.path, "boostmtree.news.R", sep=""))
 source(paste(source.path, "zzz.R", sep=""))

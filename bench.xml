@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 
 <!-- ===================================================== -->
-<!-- RF-SRC Benchmark Suite     Apache Ant version 1.8.0   -->
+<!-- RF-SRC Benchmark Suite     Apache Ant version 1.10.0  -->
 <!-- ===================================================== -->
 
-<project name="BOOSTMTREE Benchmark Suite" basedir="." default="suite-build">
+<project name="BOOSTMTREE Benchmark Suite" basedir="." default="usage">
 
   <property name="project.name" value="BOOSTMTREE Benchmark Suite"/>
   <property name="project.version" value="_PROJECT_VERSION_ID_"/>

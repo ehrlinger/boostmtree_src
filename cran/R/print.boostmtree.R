@@ -17,6 +17,7 @@ print.boostmtree <- function (x, ...)
     
     cat("model                       :", class(x)[3], "\n")
     cat("fitting mode                :", class(x)[2], "\n")
+    cat("Family                      :", x$family, "\n")
     if (x$ntree > 1) {
       cat("ntree                       :", x$ntree, "\n")
     }
@@ -27,7 +28,7 @@ print.boostmtree <- function (x, ...)
     if (!univariate) {
       cat("number of unique time points:", length(sort(unique(unlist(x$time)))), "\n")
       cat("avg. number of time points  :", round(mean(sapply(x$time, length), na.rm = TRUE), 2), "\n")
-      cat("B-spline dimension          :", ncol(x$D), "\n")
+      cat("B-spline dimension          :", ncol(x$X.tm), "\n")
       cat("penalization order          :", x$pen.ord, "\n")
     }
     else {
@@ -54,6 +55,7 @@ print.boostmtree <- function (x, ...)
      
     cat("model                       :", class(x)[3], "\n")
     cat("fitting mode                :", class(x)[2], "\n")
+    cat("Family                      :", x$family, "\n")
     cat("sample size                 :", nrow(x$x), "\n")
     cat("number of variables         :", ncol(x$x), "\n")
     if (!univariate) {

@@ -7,7 +7,8 @@
 
 library(tools)
 
-fileSuffix <- c("txt", "tab")
+if (FALSE) {
+fileSuffix <- c("txt", "csv", "RData")
 
 for (j in 1:length(fileSuffix)) {
 
@@ -19,9 +20,11 @@ for (j in 1:length(fileSuffix)) {
     if (length(dataList) > 0) {
         for (i in 1:length(dataList)) {
             assign(as.character(filePrefix[i]), dataList[[i]])
-            save(list=as.character(filePrefix[i]), file=paste(filePrefix[i], ".rda", sep=""))
+            save(list=as.character(filePrefix[i]), file=paste(filePrefix[i], ".RData", sep=""))
         }
     }
+}
+
 }
 
 resaveRdaFiles(".")

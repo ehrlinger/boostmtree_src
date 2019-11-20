@@ -1,13 +1,11 @@
-predict.boostmtree <-
-  function(object,
-           x,
-           tm,
-           id,
-           y,
-           M,
-           importance = TRUE,
-           eps = 1e-5,
-           ...)
+predict.boostmtree <- function(object,
+                               x,
+                               tm,
+                               id,
+                               y,
+                               M,
+                               eps = 1e-5,
+                               ...)
 {
 
   ## call generic predict 
@@ -17,10 +15,8 @@ predict.boostmtree <-
                                                id,
                                                y,
                                                M,
-                                               importance = importance,
                                                eps = eps,
                                                ...)
 
   return(result.predict)
-
 }
