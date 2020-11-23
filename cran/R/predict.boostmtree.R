@@ -5,10 +5,9 @@ predict.boostmtree <- function(object,
                                y,
                                M,
                                eps = 1e-5,
+                               useCVflag = FALSE,
                                ...)
 {
-
-  ## call generic predict 
   result.predict <- generic.predict.boostmtree(object = object,
                                                x,
                                                tm,
@@ -16,7 +15,7 @@ predict.boostmtree <- function(object,
                                                y,
                                                M,
                                                eps = eps,
+                                               useCVflag = useCVflag,
                                                ...)
-
   return(result.predict)
 }

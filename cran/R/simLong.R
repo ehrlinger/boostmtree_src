@@ -12,7 +12,6 @@ simLong <-  function(n = 100,
   if(length(family) != 1){
     stop("Specify any one of the family")
   }
-  
   if(any(is.na( match(family,c("Continuous","Binary"))))){
     stop("family must be Continuous or Binary")
   }

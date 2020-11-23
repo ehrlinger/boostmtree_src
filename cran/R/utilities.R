@@ -1,5 +1,4 @@
 # Function is use to create a diagonal matrix from a vector
-
 DiagMat <- function(X){
   n <- length(X)
   if(n == 1){
@@ -10,9 +9,7 @@ DiagMat <- function(X){
   }
   return(XMat)
 }
-
 # Converting linear predictor to mu using family
-
 GetMu <- function(Linear_Predictor,Family){
   if(is.list(Linear_Predictor)){
     n <- length(Linear_Predictor)
@@ -21,9 +18,14 @@ GetMu <- function(Linear_Predictor,Family){
         Linear_Predictor[[i]]
       })
     }
-    if(Family == "Binary"){
+    if(Family == "Binary" || Family == "Ordinal"){
       mu <- lapply(1:n,function(i){
         exp(Linear_Predictor[[i]])/(1 + exp(Linear_Predictor[[i]]) )
+      })
+    }
+    if(Family == "Nominal"){
+      mu <- lapply(1:n,function(i){
+        exp(Linear_Predictor[[i]])
       })
     }
   }
@@ -31,16 +33,16 @@ GetMu <- function(Linear_Predictor,Family){
     if(Family == "Continuous"){
       mu <- Linear_Predictor
     }
-    if(Family == "Binary"){
+    if(Family == "Binary" || Family == "Ordinal"){
       mu <- exp(Linear_Predictor)/(1 + exp(Linear_Predictor) )
+    }
+    if(Family == "Nominal"){
+      mu <- exp(Linear_Predictor)
     }
   }
   return(mu)
 }
-
-
 # Converting linear predictor to mu using family
-
 GetMu_Lambda <- function(Linear_Predictor,Family){
   if(is.list(Linear_Predictor)){
     n <- length(Linear_Predictor)
@@ -49,9 +51,14 @@ GetMu_Lambda <- function(Linear_Predictor,Family){
         rep(1,length(Linear_Predictor[[i]]))
       })
     }
-    if(Family == "Binary"){
+    if(Family == "Binary" || Family == "Ordinal"){
       mu <- lapply(1:n,function(i){
         exp(Linear_Predictor[[i]])/(1 + exp(Linear_Predictor[[i]]) )
+      })
+    }
+    if(Family == "Nominal"){
+      mu <- lapply(1:n,function(i){
+        exp(Linear_Predictor[[i]])
       })
     }
   }
@@ -59,15 +66,16 @@ GetMu_Lambda <- function(Linear_Predictor,Family){
     if(Family == "Continuous"){
       mu <- rep(1,length(Linear_Predictor))
     }
-    if(Family == "Binary"){
+    if(Family == "Binary" || Family == "Ordinal"){
       mu <- exp(Linear_Predictor)/(1 + exp(Linear_Predictor) )
+    }
+    if(Family == "Nominal"){
+      mu <- exp(Linear_Predictor)
     }
   }
   return(mu)
 }
-
 # Apply a transform H function
-
 Transform_H <- function(Mu, Family){
   if(is.list(Mu)){
     n <- length(Mu)
@@ -76,9 +84,14 @@ Transform_H <- function(Mu, Family){
         DiagMat(rep(1,length(Mu[[i]])))
       })
     }
-    if(Family == "Binary"){
+    if(Family == "Binary" || Family == "Ordinal"){
       H_Mu <- lapply(1:n,function(i){
         DiagMat(Mu[[i]]*(1 - Mu[[i]]))
+      })
+    }
+    if(Family == "Nominal"){
+      H_Mu <- lapply(1:n,function(i){
+        DiagMat(Mu[[i]])
       })
     }
   }
@@ -86,13 +99,15 @@ Transform_H <- function(Mu, Family){
     if(Family == "Continuous"){
       H_Mu <- DiagMat(rep(1,length(Mu)))
     }
-    if(Family == "Binary"){
+    if(Family == "Binary" || Family == "Ordinal"){
       H_Mu <- DiagMat(Mu*(1 - Mu))
+    }
+    if(Family == "Nominal"){
+      H_Mu <- DiagMat(Mu)
     }
   }
   return(H_Mu)
 }
-
 # Function for obtaining index based on approx. matching 
 AppoxMatch <- function(x,y){
   n <- length(x)
@@ -101,9 +116,7 @@ AppoxMatch <- function(x,y){
   }))
   return(out)
 }
-
 # Function to remove covariates with all elements of a column or a row missing
-
 RemoveMiss.Fun <- function(X){
   n <- nrow(X)
   WhichRow <- unlist(lapply(1:n,function(i){
@@ -120,7 +133,6 @@ RemoveMiss.Fun <- function(X){
   if(length(WhichRow.remove) > 0){
     X <- X[-WhichRow.remove,]  
   }
-  
   p <- ncol(X)
   WhichCol <- unlist(lapply(1:p,function(i){
     temp.var <- X[,i]
@@ -138,7 +150,6 @@ RemoveMiss.Fun <- function(X){
   }
   return(list(X = X,id.remove = if (length(WhichRow.remove) > 0) WhichRow.remove else NULL))
 }
-
 blup.solve <- function(transf.data, membership, sigma, Kmax) {
   lapply(1:Kmax, function(k) {
     pt.k <- (membership == k)
@@ -225,6 +236,54 @@ is.hidden.bst.frac <-  function (user.option) {
   }
   else {
     user.option$bst.frac
+  }
+}
+is.hidden.samp.mat <-  function (user.option) {
+  if (is.null(user.option$samp.mat)) {
+    NULL
+  }
+  else {
+    user.option$samp.mat
+  }
+}
+is.hidden.nsplit <-  function (user.option) {
+  if (is.null(user.option$nsplit)) {
+    NULL
+  }
+  else {
+    user.option$nsplit
+  }
+}
+is.hidden.samptype <-  function (user.option) {
+  if (is.null(user.option$samptype)) {
+    "swor"
+  }
+  else {
+    as.character(user.option$samptype)
+  }
+}
+is.hidden.xvar.wt <-  function (user.option) {
+  if (is.null(user.option$xvar.wt)) {
+    NULL
+  }
+  else {
+    user.option$xvar.wt
+  }
+}
+is.hidden.case.wt <-  function (user.option) {
+  if (is.null(user.option$case.wt)) {
+    NULL
+  }
+  else {
+    user.option$case.wt
+  }
+}
+is.hidden.seed.value <-  function (user.option) {
+  if (is.null(user.option$seed.value)) {
+    NULL
+  }
+  else {
+     user.option$seed.value
   }
 }
 is.hidden.CVlambda <-  function (user.option) {
@@ -429,23 +488,19 @@ rho.inv.sqrt <- function(ni, rho, tol = 1e-2) {
 sigma.robust <- function(lambda, rho) {
   lambda
 }
-
 papply <- function(X,FUN,...,mc.preschedule = TRUE, mc.set.seed = TRUE,
                    mc.silent = FALSE, mc.cores = getOption("mc.cores", 2L),
                    mc.cleanup = TRUE, mc.allow.recursive = TRUE){
   result.mclapply <- mclapply(X,FUN,...,mc.preschedule = mc.preschedule, mc.set.seed = mc.set.seed,
                               mc.silent = mc.silent, mc.cores = mc.cores,
                               mc.cleanup = mc.cleanup, mc.allow.recursive = mc.allow.recursive)
-  
   which.null <- which(unlist(lapply(X,function(i){
     is.null( result.mclapply[[i]] )
   })))
-  
   lth.which.null <- length(which.null)
   if(lth.which.null > 0){
     result.lapply <- lapply(which.null,FUN,...)
   }
-  
   count <- 0
   result <- lapply(X,function(i){
     if( any(i == which.null) ){
