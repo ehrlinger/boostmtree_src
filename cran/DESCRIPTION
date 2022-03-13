@@ -8,6 +8,5 @@ Depends: R (>= 3.5.0)
 Imports: _RFSRC_PACKAGE_NAME_ (>= 2.9.0), parallel, splines, nlme
 Description: Implements Friedman's gradient descent boosting algorithm for modeling longitudinal response using multivariate tree base learners. Longitudinal response could be continuous, binary, nominal or ordinal.  A time-covariate interaction effect is modeled using penalized B-splines (P-splines) with estimated adaptive smoothing parameter. Although the package is design for longitudinal data, it can handle cross-sectional data as well. Implementation details are provided in Pande et al. (2017), Mach Learn <DOI:10.1007/s10994-016-5597-1>. 
 License: GPL (>=3)
-URL: http://web.ccs.miami.edu/~hishwaran/  
-
+URL: https://ishwaran.org/ishwaran.html
 

@@ -9,9 +9,9 @@
   <!-- Generic project properties -->
   <property name="project.name" value="BOOSTMTREE Build Suite"/>
   <property name="project.version.token" value="_PROJECT_VERSION_ID_"/>
-  <property name="project.version" value="1.5.0"/>
+  <property name="project.version" value="1.5.1"/>
   <property name="project.build.token" value="_PROJECT_BUILD_ID_"/>
-  <property name="project.build" value="bld20201123a"/>
+  <property name="project.build" value="bld20220309"/>
   <property name="project.pkg.name.token" value="_PROJECT_PACKAGE_NAME_"/>
   <property name="rfsrc.pkg.name.token" value="_RFSRC_PACKAGE_NAME_"/>
 
@@ -305,12 +305,15 @@ ${scriptFileExitLine}
 
 
     <exec dir="${bldDir}/cran" executable="R" failonerror="TRUE">
-      <arg line="--vanilla"/>
-      <arg line="CMD check --as-cran ${project.pkg.name}"/>
+      <arg line="CMD check"/>
+      <arg line="--as-cran"/>
+      <arg line="${project.pkg.name}"/>
     </exec>
 
     <exec dir="${bldDir}/cran" executable="R" failonerror="TRUE">
-      <arg line="CMD build --resave-data ${project.pkg.name}"/>
+      <arg line="CMD build"/>
+      <arg line="--resave-data"/>
+      <arg line="${project.pkg.name}"/>
     </exec>
   </target>
 
@@ -320,11 +323,11 @@ ${scriptFileExitLine}
     ========================================================================
   -->
   <target name="install-generic" depends="setSourceTree,internal.osPrep,internal.setCranLibs">
-    <echo message="Install Package From Source Initiated in ${cranLibs}"/>
     <exec dir="${bldDir}/cran" executable="R" failonerror="TRUE">
-      <arg line="--vanilla"/>
       <arg line="CMD INSTALL"/>
-      <arg line="-l ${cranLibs} --build"/>
+      <arg line="--clean"/>
+      <arg line="--preclean"/>
+      <arg line="--build"/>
       <arg line="${project.pkg.name}"/>
     </exec>
   </target>
