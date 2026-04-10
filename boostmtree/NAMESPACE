@@ -1,0 +1,40 @@
+import(randomForestSRC)
+importFrom("splines", "bs")
+importFrom("nlme", "gls", "corSymm", "corCompSymm", "corAR1")
+importFrom("parallel", "mclapply")
+importFrom("graphics", "abline", "barplot", "layout", "legend",
+           "lines", "par", "plot", "points", "axis", "text",
+           "mtext", "plot.new", "title")
+importFrom("grDevices", "dev.off", "grey", "pdf")
+importFrom("stats", "as.formula", "coef", "lowess", "model.matrix",
+           "predict", "quantile", "rnorm", "runif", "sd", "supsmu",
+           "var", "rbinom", "na.omit", "plogis", "setNames")
+importFrom("utils", "txtProgressBar", "setTxtProgressBar", "modifyList")
+
+export(boostmtree,
+       boostmtree.control,
+       partial.plot,
+       marginal.plot,
+       plot.boostmtree,
+       plot.vimp.boostmtree,
+       predict.boostmtree,
+       print.boostmtree,
+       vimp.boostmtree,
+       simLong,
+       boostmtree.news)
+
+S3method(plot, boostmtree)
+S3method(plot, vimp.boostmtree)
+S3method(partial.plot, boostmtree)
+S3method(marginal.plot, boostmtree)
+S3method(plot, partial.plot.boostmtree)
+S3method(plot, marginal.plot.boostmtree)
+
+
+S3method(predict, boostmtree)
+
+
+S3method(print, boostmtree)
+
+
+
