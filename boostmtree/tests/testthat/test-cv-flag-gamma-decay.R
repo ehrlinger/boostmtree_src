@@ -12,8 +12,8 @@
 test_that("cv.flag = TRUE still yields a converging in-sample boost", {
   set.seed(202609)
   d <- simLong(
-    n = 60, N = 5, rho = 0.8, model = 2,
-    family = "continuous", q.x = 3, q.y = 0
+    n = 60, n.time = 5, rho = 0.8, model = 2,
+    family = "continuous", q = 0
   )$data.list
 
   fit <- boostmtree(
@@ -36,7 +36,11 @@ test_that("cv.flag = TRUE still yields a converging in-sample boost", {
   lower <- observed[1] - 0.25 * width
   upper <- observed[2] + 0.25 * width
 
-  predicted <- range(unlist(predict(fit, use.cv.flag = FALSE)$mu))
+  predicted.mu <- unlist(predict(fit, use.cv.flag = FALSE)$mu)
+  expect_true(length(predicted.mu) > 0)
+  expect_true(all(is.finite(predicted.mu)))
+
+  predicted <- range(predicted.mu)
 
   expect_gte(predicted[1], lower)
   expect_lte(predicted[2], upper)

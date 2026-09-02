@@ -7,8 +7,8 @@ suppressMessages(library(boostmtree))
 
 set.seed(20260902)
 d <- simLong(
-  n = 60, N = 5, rho = 0.8, model = 2,
-  family = "continuous", q.x = 3, q.y = 0
+  n = 60, n.time = 5, rho = 0.8, model = 2,
+  family = "continuous", q = 0
 )$data.list
 
 fit <- boostmtree(
