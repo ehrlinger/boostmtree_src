@@ -13,12 +13,21 @@ Cleveland Clinic Foundation patched build.
   so the linear predictor accumulated `M` unshrunk increments.
   Any output reading the stored `gamma` was affected: `predict()` with
   `use.cv.flag = FALSE`, `partial.plot()`, `marginal.plot()`,
-  `predict(...)$muhat`, and `vimp()` on the non-CV path. Cross-validated
-  output (`mu`, `err.rate`, `m.opt`, CV RMSE) was not corrupted by this bug.
-  Re-fitting on this version will still shift those values slightly, because
-  the corrected `lambda` also feeds the cross-validation update in
-  `boostmtree.update.cv.step()`; any previously reported cross-validated
-  figure should be re-derived from a re-fit rather than assumed unchanged.
+  `predict(...)$muhat`, and `vimp()` on the non-CV path.
+* Cross-validated output was not directly corrupted by the bug -- the
+  cross-validation path accumulates its own out-of-bag increments -- but it
+  was degraded indirectly, because the collapsed `lambda` also feeds
+  `boostmtree.update.cv.step()`. Cross-validated results therefore move on
+  this version, and the size and even the sign of the move depend on the
+  configuration. Measured across 18 fits (`n` = 60 and 120; `M` = 50, 150
+  and 250; three seeds each), the minimum of `err.rate` moved between 16.9%
+  lower and 13.3% higher, and cross-validated `rmse` between 41.1% lower and
+  15.6% higher; `lambda`, `phi` and `rho` shift as well. `m.opt` can move
+  substantially -- it changed in 8 of the 18 fits, including 67 to 250 and
+  119 to 248 -- so a stopping iteration chosen from an affected fit may have
+  been badly truncated. Treat `err.rate`, `m.opt`, `rmse` and `mu` from any
+  earlier `cv.flag = TRUE` fit as unusable: all of them must be re-derived
+  from a re-fit on this version, and none may be carried over.
 * Added a regression test asserting the in-sample boost converges under
   `cv.flag = TRUE`.
 

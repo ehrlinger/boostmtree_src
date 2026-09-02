@@ -62,10 +62,30 @@ Measured, same data and seed, `M = 200`:
 
 When `cv.flag = TRUE`, `boostmtree.finalize.fit()` overwrites `fit.info$mu`
 at `:410` with the *cross-validated* `mu`. The CV path accumulates only each
-subject's out-of-bag steps via `gamma.i.list`, and empirically survives the
-collapsed `lambda`: CV error curves differ by <0.1% between the broken and
-fixed builds. So `fit$mu`, `fit$err.rate`, `fit$m.opt` and CV RMSE all look
-correct — the bug is invisible until `gamma` is read.
+subject's out-of-bag steps via `gamma.i.list`, so the frozen in-sample `mu`
+never enters it directly: `fit$mu`, `fit$err.rate`, `fit$m.opt` and CV RMSE
+all stay finite and plausible. The bug is invisible until `gamma` is read.
+
+The CV path is not directly corrupted, but it is degraded indirectly, because
+the collapsed `lambda` also feeds `boostmtree.update.cv.step()`. Measured
+across 18 configurations (`n` = 60, 120; `M` = 50, 150, 250; three seeds
+each), fitted under both the pre-fix (`316ff2c`) and post-fix builds:
+
+| quantity | post-fix relative to pre-fix |
+|---|---|
+| `min(err.rate)` | −16.9% to +13.3% (median 6.0% in absolute value) |
+| CV `rmse` | −41.1% to +15.6% (median 8.7% in absolute value) |
+| `m.opt` | moved in 8 of 18 fits, e.g. 67 → 250, 67 → 150, 119 → 248 |
+| `lambda` | 100× to 1932× larger |
+| `phi` | −83.0% to +23.9% |
+| `rho` | −15.7% to +252.1% |
+
+There is no single magnitude and no single direction: both depend on `n`, `M`
+and the seed. Note especially that the pre-fix `m.opt` could stop far short of
+`M` (67 and 119 where the fixed build runs to 248–250), so a stopping
+iteration chosen from an affected fit may have been badly truncated.
+`err.rate`, `m.opt`, `rmse` and `mu` from any `cv.flag = TRUE` fit must all be
+re-derived from a refit on the fixed build; none of them may be carried over.
 
 `partial.plot()` compounds this: `R/partial_plot.boostmtree.R:359` silently
 downgrades `use.cv.flag` to `FALSE` whenever `subset` is non-`NULL`, so

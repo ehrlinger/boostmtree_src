@@ -192,7 +192,7 @@ test_that("cv.flag = TRUE still yields a converging in-sample boost", {
 
   fit <- boostmtree(
     d$features, d$time, d$id, d$y,
-    family = "continuous", M = 100, cv.flag = TRUE
+    family = "continuous", M = 100, cv.flag = TRUE, verbose = FALSE
   )
 
   # 1. Terminal-node coefficients must decay as the residual shrinks.
@@ -489,12 +489,21 @@ Cleveland Clinic Foundation patched build.
   so the linear predictor accumulated `M` unshrunk increments.
   Any output reading the stored `gamma` was affected: `predict()` with
   `use.cv.flag = FALSE`, `partial.plot()`, `marginal.plot()`,
-  `predict(...)$muhat`, and `vimp()` on the non-CV path. Cross-validated
-  output (`mu`, `err.rate`, `m.opt`, CV RMSE) was not corrupted by this bug.
-  Re-fitting on this version will still shift those values slightly, because
-  the corrected `lambda` also feeds the cross-validation update in
-  `boostmtree.update.cv.step()`; any previously reported cross-validated
-  figure should be re-derived from a re-fit rather than assumed unchanged.
+  `predict(...)$muhat`, and `vimp()` on the non-CV path.
+* Cross-validated output was not directly corrupted by the bug -- the
+  cross-validation path accumulates its own out-of-bag increments -- but it
+  was degraded indirectly, because the collapsed `lambda` also feeds
+  `boostmtree.update.cv.step()`. Cross-validated results therefore move on
+  this version, and the size and even the sign of the move depend on the
+  configuration. Measured across 18 fits (`n` = 60 and 120; `M` = 50, 150
+  and 250; three seeds each), the minimum of `err.rate` moved between 16.9%
+  lower and 13.3% higher, and cross-validated `rmse` between 41.1% lower and
+  15.6% higher; `lambda`, `phi` and `rho` shift as well. `m.opt` can move
+  substantially -- it changed in 8 of the 18 fits, including 67 to 250 and
+  119 to 248 -- so a stopping iteration chosen from an affected fit may have
+  been badly truncated. Treat `err.rate`, `m.opt`, `rmse` and `mu` from any
+  earlier `cv.flag = TRUE` fit as unusable: all of them must be re-derived
+  from a re-fit on this version, and none may be carried over.
 * Added a regression test asserting the in-sample boost converges under
   `cv.flag = TRUE`.
 
@@ -604,8 +613,21 @@ reads that frozen `mu` (under the default `control$cv.lambda = FALSE`), so
 decayed.
 
 It went unnoticed because `finalize.fit` overwrites `fit$mu` with the
-cross-validated mu, and the CV path is unaffected — CV error curves
-differ by <0.1% between the broken and fixed builds.
+cross-validated mu, and the CV path is not directly corrupted — it
+accumulates its own out-of-bag increments, so `err.rate`, `m.opt` and CV
+RMSE stay finite and plausible.
+
+The CV path is degraded indirectly, though: the collapsed `lambda` also
+feeds `boostmtree.update.cv.step()`. Fitting the pre-fix and post-fix
+builds over 18 configurations (`n` = 60, 120; `M` = 50, 150, 250; three
+seeds each), `min(err.rate)` moved between 16.9% lower and 13.3% higher
+and CV `rmse` between 41.1% lower and 15.6% higher — the magnitude and
+the sign both depend on the configuration — and `lambda`, `phi` and `rho`
+shift as well. `m.opt` moved in 8 of the 18 fits, including 67 → 250 and
+119 → 248, so a stopping iteration chosen from an affected fit may have
+been badly truncated. `err.rate`, `m.opt`, `rmse` and `mu` from a
+`cv.flag = TRUE` fit must all be re-derived from a refit on this build;
+none of them may be carried over.
 
 ## Fix
 
