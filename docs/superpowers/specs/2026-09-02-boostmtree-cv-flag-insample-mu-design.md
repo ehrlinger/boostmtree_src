@@ -130,9 +130,11 @@ The repo has no `tests/` directory; this adds `testthat` scaffolding:
 The regression test is the one that would have caught this: fit a small
 model with `cv.flag = TRUE` and assert that the boosting actually converges —
 
-1. `max|gamma|` at late `m` is a small fraction of its value at `m = 1`.
-2. `predict(fit, use.cv.flag = FALSE)$mu` lies within a tolerance of the
-   observed response range.
+1. `max|gamma|` at the final `m` is < 25% of its value at `m = 1`.
+   Measured: ~1% when fixed, ~89% when broken, so the threshold separates
+   the two cleanly without being brittle to RNG.
+2. `predict(fit, use.cv.flag = FALSE)$mu` lies within the observed response
+   range expanded by 25% of its width on each side.
 
 Asserting on `gamma` decay rather than on a stored numeric fixture keeps the
 test robust to RNG and platform differences while still failing loudly if the
