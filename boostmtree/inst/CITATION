@@ -3,6 +3,9 @@ citHeader("To cite boostmtree in publications use:")
 titl <- meta$Title
 year <- sub(".*(2[[:digit:]]{3})-.*", "\\1", meta$Date)
 vers <- paste("R package version", meta$Version)
+fork <- "https://github.com/ehrlinger/boostmtree_src"
+note <- paste(vers, "; Cleveland Clinic Foundation patched build, not a CRAN release; ",
+              fork, sep = "")
 
 bibentry(bibtype="Manual",
          title = titl,
@@ -11,9 +14,8 @@ bibentry(bibtype="Manual",
 	                  person(family="Kogalur", given="U.B.")),
 	 publisher = "manual",
          year         = year,
-         note         = vers,
-         url          = "https://cran.r-project.org/package=boostmtree",
-         pdf          = "https://cran.r-project.org/web/packages/boostmtree/boostmtree.pdf",
+         note         = note,
+         url          = fork,
          textVersion =
          paste("Ishwaran H., Pande A. and Kogalur U.B. (",year ,"). ",
-               titl, ", ", vers, ".", sep=""))
+               titl, ", ", note, ".", sep=""))
