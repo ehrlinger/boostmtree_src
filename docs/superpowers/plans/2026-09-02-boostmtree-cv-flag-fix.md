@@ -490,7 +490,11 @@ Cleveland Clinic Foundation patched build.
   Any output reading the stored `gamma` was affected: `predict()` with
   `use.cv.flag = FALSE`, `partial.plot()`, `marginal.plot()`,
   `predict(...)$muhat`, and `vimp()` on the non-CV path. Cross-validated
-  output (`mu`, `err.rate`, `m.opt`, CV RMSE) was not affected.
+  output (`mu`, `err.rate`, `m.opt`, CV RMSE) was not corrupted by this bug.
+  Re-fitting on this version will still shift those values slightly, because
+  the corrected `lambda` also feeds the cross-validation update in
+  `boostmtree.update.cv.step()`; any previously reported cross-validated
+  figure should be re-derived from a re-fit rather than assumed unchanged.
 * Added a regression test asserting the in-sample boost converges under
   `cv.flag = TRUE`.
 
