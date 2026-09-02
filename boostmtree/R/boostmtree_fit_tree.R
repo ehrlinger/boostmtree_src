@@ -738,7 +738,7 @@ boostmtree.fit.tree <- function(model.info) {
           boostmtree.l2.dist(model.info$y.org[[q]], mu.cv.original.scale)
         )
       }
-    } else {
+    }
       if (model.info$family == "nominal") {
         l.pred.ref <- lapply(seq_len(model.info$n), function(i) {
           log((1 + Reduce("+", lapply(seq_len(model.info$n.q), function(q) {
@@ -754,7 +754,6 @@ boostmtree.fit.tree <- function(model.info) {
           boostmtree.get.mu(l.pred[[q]][[i]], family = model.info$family)
         })
       }
-    }
     for (q in seq_len(model.info$n.q)) {
       if (!model.info$univariate && rho.fit.flag) {
         gls.current <- if (cv.rho.flag) cv.state$mu.cv[[q]] else mu[[q]]
