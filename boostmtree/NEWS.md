@@ -1,3 +1,23 @@
+# boostmtree 2.0.1
+
+Cleveland Clinic Foundation patched build.
+
+## Bug fixes
+
+* Fixed terminal-node coefficients (`gamma`) diverging when a model is fit
+  with `cv.flag = TRUE`. The in-sample linear predictor and mean were
+  refreshed only on the `cv.flag = FALSE` branch of the boosting loop, so
+  with cross-validation enabled the working fit stayed frozen at its
+  initialization. Residuals never shrank, the ridge penalty `lambda`
+  collapsed, and each boosting step contributed a same-sized coefficient,
+  so the linear predictor accumulated `M` unshrunk increments.
+  Any output reading the stored `gamma` was affected: `predict()` with
+  `use.cv.flag = FALSE`, `partial.plot()`, `marginal.plot()`,
+  `predict(...)$muhat`, and `vimp()` on the non-CV path. Cross-validated
+  output (`mu`, `err.rate`, `m.opt`, CV RMSE) was not affected.
+* Added a regression test asserting the in-sample boost converges under
+  `cv.flag = TRUE`.
+
 # boostmtree 2.0.0
 
 This is a major maintenance and interface-cleanup release prepared for CRAN resubmission.
