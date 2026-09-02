@@ -429,8 +429,12 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 ### Task 5: Version bump, NEWS, and fork provenance
 
 **Files:**
-- Modify: `boostmtree/DESCRIPTION` (lines 2, 3, 12)
+- Modify: `boostmtree/DESCRIPTION` (the `Version:`, `Date:` and `Description:` fields)
 - Modify: `boostmtree/NEWS.md` (prepend a section)
+
+**Note on line numbers:** Task 2 inserted two lines (`Suggests:` and
+`Config/testthat/edition:`) after `Imports:`, so `Description:` is no longer
+line 12. Locate these fields by name, not by line number.
 
 **Interfaces:**
 - Consumes: the fix from Task 3.
@@ -438,11 +442,15 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 - [ ] **Step 1: Bump version and date**
 
-In `boostmtree/DESCRIPTION`, line 2 becomes `Version: 2.0.1` and line 3 becomes `Date: 2026-09-02`.
+In `boostmtree/DESCRIPTION`, set the `Version:` field to `2.0.1` and the
+`Date:` field to `2026-09-02`. These are lines 2 and 3 and were not moved by
+Task 2, but match on the field name rather than the line number.
 
 - [ ] **Step 2: Note the fork in the Description prose**
 
-Append this sentence to the end of the `Description:` field (line 12), inside the same field, after the existing final `<DOI:10.1007/s10994-016-5597-1>. `:
+Append this sentence to the end of the `Description:` field, inside the same
+field, after the existing final `<DOI:10.1007/s10994-016-5597-1>. `. Find the
+field by matching `^Description:`, not by line number:
 
 ```
 This is a Cleveland Clinic Foundation patched build correcting terminal-node coefficient divergence when fitting with cross-validation enabled.
