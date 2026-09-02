@@ -108,11 +108,25 @@ Behaviour deliberately left unchanged: `finalize.fit` still overwrites
 entry. Patch digit only, straight three-digit. This gives the analysis and
 its methods statement an identifier distinct from upstream 2.0.0.
 
-Tagged `v2.0.1` so installs pin to an immutable ref:
+A non-numeric version (`2.0.0.fix`, `2.0.0.ccf`) is not an option: R's
+`package_version()` rejects letters outright and the build would fail to
+install. A fourth numeric component (`2.0.0.9000`) parses but violates the
+project's straight-three-digit rule.
+
+Fork identity is instead carried where it is legal and durable:
+
+- git tag `v2.0.1-ccf` (tags permit letters), so the installable ref is marked
+- a sentence in the DESCRIPTION `Description:` prose noting the CCF patch
+- the `Remote*` fields that `remotes` stamps into the installed DESCRIPTION
+
+That last one is decisive for provenance: after install,
+`packageDescription("boostmtree")$RemoteSha` pins the exact commit and
+`$RemoteUsername` returns `ehrlinger`, while an upstream CRAN 2.0.1 would
+carry no `Remote*` fields at all. Cite the SHA in the methods statement.
 
 ```r
 remotes::install_github("ehrlinger/boostmtree_src",
-                        subdir = "boostmtree", ref = "v2.0.1")
+                        subdir = "boostmtree", ref = "v2.0.1-ccf")
 ```
 
 The package lives in the `boostmtree/` subdirectory and the repo has no root
