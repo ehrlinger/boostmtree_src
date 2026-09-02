@@ -18,7 +18,7 @@ test_that("cv.flag = TRUE still yields a converging in-sample boost", {
 
   fit <- boostmtree(
     d$features, d$time, d$id, d$y,
-    family = "continuous", M = 100, cv.flag = TRUE
+    family = "continuous", M = 100, cv.flag = TRUE, verbose = FALSE
   )
 
   # 1. Terminal-node coefficients must decay as the residual shrinks.
