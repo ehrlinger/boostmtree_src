@@ -1,0 +1,65 @@
+# Consumer-style install smoke test for the boostmtree CCF fork.
+#
+# R CMD check proves the source tree is sound. This job proves that an
+# INSTALLED build, put in place the way a downstream analyst would install it,
+# still exercises the fixed cv.flag = TRUE in-sample path correctly.
+#
+# NOTE ON install_github: the real consumer command is
+#   remotes::install_github("ehrlinger/boostmtree_src", subdir = "boostmtree",
+#                           ref = "v2.0.1-ccf")
+# That cannot run here until the branch and tag are pushed, so this workflow
+# installs from the checked-out subdirectory with remotes::install_local(),
+# which exercises the same "package lives in a subdirectory" build path. The
+# install_github subdir/ref form is verified separately once the tag exists.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+name: install-smoke
+
+permissions: read-all
+
+jobs:
+  install-smoke:
+    runs-on: ${{ matrix.os }}
+    name: install smoke (${{ matrix.os }})
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+
+      # "hard" = Depends/Imports/LinkingTo only, i.e. what a consumer gets.
+      # Suggests are deliberately not installed here; the testthat suite is the
+      # R-CMD-check workflow's job.
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          working-directory: boostmtree
+          dependencies: '"hard"'
+          extra-packages: any::remotes
+
+      - name: Install boostmtree from the boostmtree/ subdirectory
+        shell: bash
+        run: Rscript -e 'remotes::install_local("boostmtree", dependencies = FALSE, upgrade = "never", force = TRUE)'
+
+      # Small fixed-seed simLong fit with cv.flag = TRUE, then
+      # predict(use.cv.flag = FALSE), asserting the fitted values stay inside a
+      # sane band around the observed response range. Runs in ~2s.
+      - name: Smoke test the installed build
+        shell: bash
+        run: Rscript tools/smoke/install-smoke.R
