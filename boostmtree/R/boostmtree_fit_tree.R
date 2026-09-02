@@ -739,21 +739,21 @@ boostmtree.fit.tree <- function(model.info) {
         )
       }
     }
-      if (model.info$family == "nominal") {
-        l.pred.ref <- lapply(seq_len(model.info$n), function(i) {
-          log((1 + Reduce("+", lapply(seq_len(model.info$n.q), function(q) {
-            exp(l.pred.db[[q]][[i]])
-          })))^(-1))
-        })
-      }
-      for (q in seq_len(model.info$n.q)) {
-        l.pred[[q]] <- lapply(seq_len(model.info$n), function(i) {
-          l.pred.ref[[i]] + l.pred.db[[q]][[i]]
-        })
-        mu[[q]] <- lapply(seq_len(model.info$n), function(i) {
-          boostmtree.get.mu(l.pred[[q]][[i]], family = model.info$family)
-        })
-      }
+    if (model.info$family == "nominal") {
+      l.pred.ref <- lapply(seq_len(model.info$n), function(i) {
+        log((1 + Reduce("+", lapply(seq_len(model.info$n.q), function(q) {
+          exp(l.pred.db[[q]][[i]])
+        })))^(-1))
+      })
+    }
+    for (q in seq_len(model.info$n.q)) {
+      l.pred[[q]] <- lapply(seq_len(model.info$n), function(i) {
+        l.pred.ref[[i]] + l.pred.db[[q]][[i]]
+      })
+      mu[[q]] <- lapply(seq_len(model.info$n), function(i) {
+        boostmtree.get.mu(l.pred[[q]][[i]], family = model.info$family)
+      })
+    }
     for (q in seq_len(model.info$n.q)) {
       if (!model.info$univariate && rho.fit.flag) {
         gls.current <- if (cv.rho.flag) cv.state$mu.cv[[q]] else mu[[q]]

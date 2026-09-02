@@ -484,9 +484,9 @@ Cleveland Clinic Foundation patched build.
   with `cv.flag = TRUE`. The in-sample linear predictor and mean were
   refreshed only on the `cv.flag = FALSE` branch of the boosting loop, so
   with cross-validation enabled the working fit stayed frozen at its
-  initialization. Residuals never shrank, `phi` inflated, the ridge penalty
-  `lambda` collapsed, and each boosting step contributed a same-sized
-  coefficient, so the linear predictor accumulated `M` unshrunk increments.
+  initialization. Residuals never shrank, the ridge penalty `lambda`
+  collapsed, and each boosting step contributed a same-sized coefficient,
+  so the linear predictor accumulated `M` unshrunk increments.
   Any output reading the stored `gamma` was affected: `predict()` with
   `use.cv.flag = FALSE`, `partial.plot()`, `marginal.plot()`,
   `predict(...)$muhat`, and `vimp()` on the non-CV path. Cross-validated
@@ -595,9 +595,9 @@ in `M`.
 `:741` made the in-sample branch its `else`, so the in-sample
 `l.pred`/`mu` refresh ran only when `cv.flag = FALSE`. With CV enabled
 `mu` stayed frozen at its initialization. `boostmtree.estimate.lambda()`
-and `boostmtree.update.gls.parameters()` both read that frozen `mu`, so
-`phi` inflated, `lambda` collapsed by ~3 orders of magnitude, and
-`max|gamma|` never decayed.
+reads that frozen `mu` (under the default `control$cv.lambda = FALSE`), so
+`lambda` collapsed by ~3 orders of magnitude, and `max|gamma|` never
+decayed.
 
 It went unnoticed because `finalize.fit` overwrites `fit$mu` with the
 cross-validated mu, and the CV path is unaffected — CV error curves
@@ -676,3 +676,9 @@ univariate fits (`n.q = 1`), so only the continuous path is involved.
 - hvtiPlotR helper for subgroup ensemble curves built from
   `predict(fit)$muhat` by row-subsetting, avoiding the `partial.plot()`
   `subset` -> `use.cv.flag = FALSE` downgrade entirely.
+- `test-cv-flag-gamma-decay.R`'s regression coverage is `family = "continuous"`
+  only. The gamma decay-ratio assertion as written is not portable to the
+  binary, nominal, or ordinal families: their in-sample `mu` legitimately
+  drives toward 0/1, so the ratio can stay above 1 even when the fix is
+  correct. A family-appropriate assertion (or family-specific skip) is
+  needed before extending this test to those families.

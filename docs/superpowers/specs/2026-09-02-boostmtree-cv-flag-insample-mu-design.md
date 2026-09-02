@@ -37,12 +37,16 @@ whole boosting loop. The consequences chain:
 1. `boostmtree.estimate.lambda()` reads the frozen `mu` (via `mu.for.lambda`,
    which is the in-sample `mu` under the default `control$cv.lambda = FALSE`)
    and so sees full-size residuals at every iteration.
-2. `boostmtree.update.gls.parameters()` likewise inflates `phi`.
-3. The ridge penalty `lambda` collapses by ~3 orders of magnitude.
-4. With effectively no penalty, each terminal-node coefficient vector is fit
+2. The ridge penalty `lambda` collapses by ~3 orders of magnitude. (Under the
+   default `control$cv.rho = TRUE`, `boostmtree.update.gls.parameters()`
+   reads the cross-validated `mu`, not the frozen in-sample `mu`; the `phi`
+   difference in the table below is a downstream effect of the collapsed
+   `lambda`, which the CV path's own gamma fits also take as an argument —
+   not a direct read of the frozen `mu`.)
+3. With effectively no penalty, each terminal-node coefficient vector is fit
    to the full response rather than to a shrinking residual, so `max|gamma|`
    never decays.
-5. `l.pred.db` — which *is* updated each iteration — accumulates `M` unshrunk
+4. `l.pred.db` — which *is* updated each iteration — accumulates `M` unshrunk
    increments, producing a random walk instead of a converging boost.
 
 Measured, same data and seed, `M = 200`:
