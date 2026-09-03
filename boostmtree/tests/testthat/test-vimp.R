@@ -29,10 +29,14 @@ fit.categorical <- function(family, y.fun, cv.flag = TRUE) {
       family = "continuous", q = 0
     )$data.list
   })
+  # Build the response before seeding the fit. y.fun seeds itself, and R
+  # forces arguments inside the call, so generating y in the argument list
+  # would reset the RNG after set.seed() and leave the fit seed doing nothing.
+  y <- y.fun(length(d$y))
   set.seed(7)
   list(
     fit = boostmtree(
-      d$features, d$time, d$id, y.fun(length(d$y)),
+      d$features, d$time, d$id, y,
       family = family, M = 8, cv.flag = cv.flag, verbose = FALSE
     ),
     d = d
