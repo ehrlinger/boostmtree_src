@@ -1,3 +1,35 @@
+# boostmtree 2.0.2
+
+Cleveland Clinic Foundation patched build.
+
+## Bug fixes
+
+* `na.action = "na.omit"` is now accepted. The formal is written
+  `c("na.omit", "na.impute")[2]`, which evaluates to the single string
+  `"na.impute"`, and a bare `match.arg()` takes its choices from that
+  evaluated default. The documented value was therefore rejected, and the
+  `na.omit` branch of the missing-data rule (drop subjects with any missing
+  covariate, rather than only those missing all of them) was unreachable.
+* `vimp.boostmtree(joint = TRUE)` no longer fails with "length of 'dimnames'
+  [1] not equal to array extent". The collapse to a single `joint.vimp` label
+  was applied only when `x.names` was supplied, so at the documented default
+  the importance matrix had one row and one label per covariate. Supplying
+  `x.names` took the working branch, which made the failure look intermittent.
+
+Both are present in CRAN `boostmtree` 2.0.0 and have been reported upstream.
+
+## Internal
+
+* Removed `R/utilities.R`. The 2.0.0 refactor moved its contents into
+  `boostmtree_math.R` and friends under `boostmtree.`-prefixed names and left
+  the original file in the package; none of its 16 functions had a caller or
+  was exported. It also carried an unguarded `solve()` that the live code path
+  guards, which made it a standing source of false bug reports.
+* Test coverage raised from 46.9% to 81.1%, with no source file left at zero.
+  `partial.plot`, `marginal.plot`, `vimp.boostmtree`, `plot.boostmtree` and
+  `print.boostmtree` had no tests at all; all plotting tests assert the absence
+  of warnings. Both bug fixes above were found by writing these tests.
+
 # boostmtree 2.0.1
 
 Cleveland Clinic Foundation patched build.
