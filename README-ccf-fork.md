@@ -1,4 +1,4 @@
-# boostmtree — Cleveland Clinic Foundation patched fork
+# boostmtree: Cleveland Clinic Foundation patched fork
 
 ## What this is
 
@@ -9,8 +9,8 @@ loop. The in-sample residuals therefore never shrank: `phi` inflated, the ridge
 penalty `lambda` collapsed by roughly three orders of magnitude, and every
 boosting step contributed a same-sized terminal-node coefficient, so the linear
 predictor accumulated `M` unshrunk increments and diverged linearly in `M`.
-Anything that reads the non-cross-validated path — `predict(..., use.cv.flag =
-FALSE)`, `partial.plot()`, `vimp()` — was affected. The `cv.flag = FALSE` path
+Anything that reads the non-cross-validated path (`predict(..., use.cv.flag =
+FALSE)`, `partial.plot()`, `vimp()`) was affected. The `cv.flag = FALSE` path
 was never wrong and is bit-identical before and after the fix. The package
 itself lives in the [`boostmtree/`](boostmtree) subdirectory of this repository.
 
@@ -35,7 +35,7 @@ This matters. `boostmtree` obtains terminal-node memberships from
 `DESCRIPTION` only requires `randomForestSRC (>= 3.5.0)`, but every verification
 run for this fork was done against **randomForestSRC 3.6.2, R 4.6.1, macOS
 arm64**. A different `randomForestSRC` can partition the covariate space
-differently, which changes `gamma`, which changes the fitted values — silently,
+differently, which changes `gamma`, which changes the fitted values, silently,
 with no error raised. Run the check before you trust any numbers:
 
 ```sh
@@ -64,7 +64,7 @@ across machines.)
 
 ## Performance: use `cv.flag = TRUE` once, then turn it off
 
-`cv.flag = TRUE` is about **5x slower** than `cv.flag = FALSE` — measured at
+`cv.flag = TRUE` is about **5x slower** than `cv.flag = FALSE`, measured at
 10.1 s versus 1.9 s for `M = 50`, `n = 150`. Recommended workflow:
 
 1. Fit once with `cv.flag = TRUE` to select the optimal number of boosting
@@ -88,9 +88,9 @@ curve. Refit from the data.
 
 ## Continuous integration
 
-* `.github/workflows/R-CMD-check.yaml` — `R CMD check --as-cran` on
+* `.github/workflows/R-CMD-check.yaml`: `R CMD check --as-cran` on
   ubuntu/macos/windows, R release, including the `testthat` suite.
-* `.github/workflows/install-smoke.yaml` — installs the package from the
+* `.github/workflows/install-smoke.yaml`: installs the package from the
   subdirectory the way a consumer would and runs `tools/smoke/install-smoke.R`,
   a small fixed-seed `cv.flag = TRUE` fit whose `predict(use.cv.flag = FALSE)`
   output must stay inside a sane band around the observed response range.
