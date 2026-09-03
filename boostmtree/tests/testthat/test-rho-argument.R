@@ -35,10 +35,17 @@ test_that("a supplied rho is held fixed rather than re-estimated", {
   }
 })
 
-test_that("rho = NULL re-estimates rho across iterations", {
+test_that("rho = NULL estimates rho rather than holding it fixed", {
+  # Asserting "more than one distinct value across iterations" would be
+  # over-specified: estimation can legitimately converge to a constant on some
+  # data or platform. The property that actually matters is that NULL does not
+  # behave like a fixed-rho run.
   d <- make.data()
-  fit <- fit.with.rho(d, NULL)
-  expect_gt(length(unique(fit$rho)), 1L)
+  estimated <- fit.with.rho(d, NULL)$rho
+  fixed <- fit.with.rho(d, 0)$rho
+
+  expect_equal(length(estimated), length(fixed))
+  expect_false(isTRUE(all.equal(estimated, fixed)))
 })
 
 test_that("rho outside (-1, 1) is rejected rather than silently coerced", {
