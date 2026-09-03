@@ -100,9 +100,14 @@ test_that("plot and print cover the non-continuous families", {
     }
   )
   on.null.device(for (family in names(cases)) {
+    # Build the response before seeding the fit. The generators seed
+    # themselves, and R forces arguments inside the call, so generating y in
+    # the argument list would reset the RNG after set.seed() and leave the fit
+    # seed doing nothing.
+    y <- cases[[family]](length(d$y))
     set.seed(7)
     fit <- boostmtree(
-      d$features, d$time, d$id, cases[[family]](length(d$y)),
+      d$features, d$time, d$id, y,
       family = family, M = 8, cv.flag = TRUE, verbose = FALSE
     )
     expect_no_warning(plot(fit))
