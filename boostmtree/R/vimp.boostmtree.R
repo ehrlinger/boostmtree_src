@@ -40,7 +40,7 @@ boostmtree.vimp.select.variables <- function(x.var.names, x.names = NULL, joint 
   p.total <- length(x.var.names)
   if (is.null(x.names)) {
     selected.index <- seq_len(p.total)
-    selected.names <- x.var.names
+    selected.names <- if (joint) "joint.vimp" else x.var.names
   } else {
     selected.index <- match(x.names, x.var.names)
     if (anyNA(selected.index)) {
