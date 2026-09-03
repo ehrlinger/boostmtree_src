@@ -26,7 +26,7 @@ boostmtree <- function(
   control = boostmtree.control()
 ) {
   family <- boostmtree.match.family(family)
-  na.action <- match.arg(na.action)
+  na.action <- match.arg(na.action, c("na.omit", "na.impute"))
   control <- boostmtree.normalize.control(control)
   if (length(M) != 1L || is.na(M)) {
     stop("`M` must be a single positive integer.")
