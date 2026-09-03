@@ -22,10 +22,11 @@ remotes::install_github("ehrlinger/boostmtree_src",
                         ref    = "v2.0.1-ccf")
 ```
 
-**The `v2.0.1-ccf` tag does not exist yet.** The command above is the intended
-install once the maintainer tags the release. Until then, install from the
-branch, or from a local clone with
-`remotes::install_local("boostmtree")` from the repository root.
+If the `v2.0.1-ccf` tag is not yet published, install from the branch instead,
+or from a local clone with `remotes::install_local("boostmtree")` run from the
+repository root. Check the
+[tags page](https://github.com/ehrlinger/boostmtree_src/tags) for what is
+currently available.
 
 ## Verify your machine reproduces the reference fit
 

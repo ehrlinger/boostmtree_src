@@ -24,7 +24,7 @@
 
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) > 1L) {
-  stop("usage: Rscript reproducibility-check.R [baseline.rds]")
+  stop("usage: Rscript tools/baseline/reproducibility-check.R [baseline.rds]")
 }
 
 ## ---------------------------------------------------------------------------
