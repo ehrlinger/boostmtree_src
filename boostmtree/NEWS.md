@@ -1,3 +1,13 @@
+# boostmtree 2.0.3
+
+Cleveland Clinic Foundation patched build.
+
+## Housekeeping
+
+* Dropped the unused `parallel` dependency. The 2.0.0 refactor removed every
+  `mclapply()` call, leaving `importFrom("parallel", "mclapply")` in
+  `NAMESPACE` and `parallel` in `Imports` with nothing using them.
+
 # boostmtree 2.0.2
 
 Cleveland Clinic Foundation patched build.
