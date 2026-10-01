@@ -306,12 +306,13 @@ boostmtree.vimp.from.grow <- function(object, x.names = NULL, joint = FALSE) {
     stop("Unable to determine the optimized number of iterations from the fitted object.")
   }
   boostmtree.vimp.require.oob(object = object, m.opt = m.opt, n.q = n.q)
-  oob.list <- lapply(seq_len(n.q), function(q) vector("list", m.opt[q]))
+  oob.list <- lapply(seq_len(n.q), function(q) {
+    lapply(seq_len(m.opt[q]), function(m) which(base.learner[[q]][[m]]$inbag == 0))
+  })
   membership.noise.list <- vector("list", n.q)
   for (q in seq_len(n.q)) {
     membership.noise.list[[q]] <- lapply(seq_len(m.opt[q]), function(m) {
-      oob <- which(base.learner[[q]][[m]]$inbag == 0)
-      oob.list[[q]][[m]] <<- oob
+      oob <- oob.list[[q]][[m]]
       n.oob <- length(oob)
       if (n.oob == 0L) {
         return(matrix(NA, nrow = 0L, ncol = variable.info$p))
