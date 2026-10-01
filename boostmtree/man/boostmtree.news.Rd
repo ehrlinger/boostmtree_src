@@ -11,9 +11,12 @@ boostmtree.news(...)
   \item{...}{Further arguments passed to or from other methods.}
 }
 \value{
-  None.
+  No return value, called for side effects (displays the NEWS file).
 }
 \author{
 Amol Pande, Udaya B. Kogalur and Hemant Ishwaran
+}
+\examples{
+if (interactive()) boostmtree.news()
 }
 \keyword{documentation}
