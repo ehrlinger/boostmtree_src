@@ -7,6 +7,9 @@ Cleveland Clinic Foundation patched build.
 * Dropped the unused `parallel` dependency. The 2.0.0 refactor removed every
   `mclapply()` call, leaving `importFrom("parallel", "mclapply")` in
   `NAMESPACE` and `parallel` in `Imports` with nothing using them.
+* CRAN Cookbook fixes: `boostmtree.news()` documents its return value as
+  called for side effects and gains an example; the `Description` uses the
+  lowercase `<doi:...>` form and fixes "is design for".
 
 # boostmtree 2.0.2
 
