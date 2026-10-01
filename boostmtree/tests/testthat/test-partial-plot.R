@@ -177,7 +177,7 @@ test_that("partial.plot nests curves by class for a nominal response", {
     set.seed(9); factor(sample(c("a", "b", "c"), n, replace = TRUE))
   })
   expect_no_warning(
-    p <- partial.plot(fit, x.var.names = "x1", time.points = 1,
+    p <- partial.plot(fit, x.var.names = "x1", time.points = c(1, 2),
                       n.points = 4, output = "data", verbose = FALSE)
   )
 
@@ -188,6 +188,10 @@ test_that("partial.plot nests curves by class for a nominal response", {
     expect_true(all(is.finite(v)))
     expect_true(all(v >= 0 & v <= 1))
   }
+  # The curves are the non-reference classes, so jointly they can take at
+  # most the whole probability mass; bounding each one alone does not imply it.
+  totals <- Reduce(`+`, lapply(p$curves, function(cl) curve.values(cl$x1)))
+  expect_true(all(totals <= 1 + 1e-8))
 })
 
 test_that("partial.plot with prob.class = TRUE gives ordinal class probabilities that sum to one", {
@@ -195,12 +199,17 @@ test_that("partial.plot with prob.class = TRUE gives ordinal class probabilities
     set.seed(9); factor(sample(1:3, n, replace = TRUE), ordered = TRUE)
   })
 
-  cumulative <- partial.plot(fit, x.var.names = "x1", time.points = 1,
+  cumulative <- partial.plot(fit, x.var.names = "x1", time.points = c(1, 2),
                              n.points = 4, output = "data", verbose = FALSE)
   expect_length(cumulative$curves, length(cumulative$response.labels))
-  for (per.level in cumulative$curves) {
-    v <- curve.values(per.level$x1)
+  levels.v <- lapply(cumulative$curves, function(cl) curve.values(cl$x1))
+  for (v in levels.v) {
     expect_true(all(v >= 0 & v <= 1))
+  }
+  # Cumulative probabilities P(Y <= k) must not cross or reverse across
+  # thresholds, at every grid point and time.
+  for (k in seq_along(levels.v)[-1]) {
+    expect_true(all(levels.v[[k]] >= levels.v[[k - 1]] - 1e-8))
   }
 
   expect_no_warning(
@@ -219,9 +228,44 @@ test_that("prob.class = TRUE is downgraded with a warning outside the ordinal fa
   fit <- make.categorical("binary", function(n) {
     set.seed(9); rbinom(n, 1, 0.4)
   })
+  default <- partial.plot(fit, x.var.names = "x1", time.points = 1,
+                          n.points = 4, output = "data", verbose = FALSE)
   expect_warning(
-    partial.plot(fit, x.var.names = "x1", time.points = 1, n.points = 4,
-                 prob.class = TRUE, output = "data", verbose = FALSE),
+    downgraded <- partial.plot(fit, x.var.names = "x1", time.points = 1,
+                               n.points = 4, prob.class = TRUE,
+                               output = "data", verbose = FALSE),
     "only used for the ordinal family"
   )
+  # Ignored means ignored: the result matches the default call.
+  expect_false(downgraded$prob.class)
+  expect_identical(downgraded$curves, default$curves)
+  expect_identical(downgraded$response.labels, default$response.labels)
+})
+
+test_that("partial.plot draws multi-panel plots for nominal and ordinal responses without warnings", {
+  grDevices::pdf(NULL)
+  on.exit(grDevices::dev.off(), add = TRUE)
+
+  nominal <- make.categorical("nominal", function(n) {
+    set.seed(9); factor(sample(c("a", "b", "c"), n, replace = TRUE))
+  })
+  ordinal <- make.categorical("ordinal", function(n) {
+    set.seed(9); factor(sample(1:3, n, replace = TRUE), ordered = TRUE)
+  })
+
+  cases <- list(
+    list(fit = nominal, prob.class = FALSE),
+    list(fit = ordinal, prob.class = FALSE),
+    list(fit = ordinal, prob.class = TRUE)
+  )
+  for (case in cases) {
+    expect_no_warning(
+      p <- partial.plot(case$fit, x.var.names = c("x1", "x2"),
+                        time.points = 1, n.points = 4,
+                        prob.class = case$prob.class, verbose = FALSE)
+    )
+    expect_s3_class(p, "partial.plot.boostmtree")
+    expect_gt(length(p$response.labels), 1L)
+    expect_named(p$curves, p$response.labels)
+  }
 })
