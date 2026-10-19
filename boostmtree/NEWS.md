@@ -1,3 +1,23 @@
+# boostmtree 2.0.4
+
+Cleveland Clinic Foundation patched build.
+
+## Performance
+
+* `cv.flag = TRUE` fits can run the out-of-bag update on several cores with
+  the new `boostmtree.control(cv.cores = )`. Each boosting step refits the
+  terminal nodes once for every out-of-bag subject, which makes the
+  cross-validated fit cost grow with the square of the number of subjects;
+  those refits are independent within a step and are now forked with
+  `parallel::mclapply()`. The default of 1 core keeps the sequential path.
+  The refits draw no random numbers, so `mu`, `err.rate` and `m.opt` are
+  identical for any core count. Windows, which cannot fork, uses 1 core.
+* The out-of-bag update looks up each subject's terminal-node row once per
+  step instead of once per (left-out, other) subject pair, and the node
+  refit forms D'V^-1 once with `crossprod()` and reuses it for the Hessian
+  and the score. Neither change alters the fit.
+* `parallel` returns to `Imports`, now that it is used again.
+
 # boostmtree 2.0.3
 
 Cleveland Clinic Foundation patched build.

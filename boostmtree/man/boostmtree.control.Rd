@@ -17,7 +17,8 @@ boostmtree.control(
   case.wt = NULL,
   seed = NULL,
   cv.lambda = FALSE,
-  cv.rho = TRUE
+  cv.rho = TRUE,
+  cv.cores = 1L
 )
 }
 \arguments{
@@ -58,6 +59,14 @@ boostmtree.control(
 
   \item{cv.rho}{Logical; should the CV path use the cross-validated mean when
     updating \code{rho} and \code{phi}?}
+
+  \item{cv.cores}{Number of cores used for the out-of-bag update when
+    \code{cv.flag = TRUE}. Each boosting step refits the terminal nodes once
+    for every out-of-bag subject, and those refits are independent, so they
+    can run in parallel with \code{parallel::mclapply()}. The default, 1,
+    runs them sequentially. Values above 1 give the same fit as 1, because
+    the refits draw no random numbers. Forking is unavailable on Windows,
+    where a value above 1 is reset to 1 with a warning.}
 
 }
 
