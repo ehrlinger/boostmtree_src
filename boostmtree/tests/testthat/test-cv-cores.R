@@ -29,5 +29,38 @@ test_that("cv.cores > 1 gives the identical cross-validated fit", {
 test_that("cv.cores is validated", {
   expect_error(boostmtree:::boostmtree.normalize.control(boostmtree.control(cv.cores = 0)), "cv.cores")
   expect_error(boostmtree:::boostmtree.normalize.control(boostmtree.control(cv.cores = NA)), "cv.cores")
-  expect_identical(boostmtree:::boostmtree.normalize.control(boostmtree.control(cv.cores = 3))$cv.cores, 3L)
+  if (.Platform$OS.type == "windows") {
+    expect_warning(
+      ctl <- boostmtree:::boostmtree.normalize.control(boostmtree.control(cv.cores = 3)),
+      "Windows"
+    )
+    expect_identical(ctl$cv.cores, 1L)
+  } else {
+    expect_identical(boostmtree:::boostmtree.normalize.control(boostmtree.control(cv.cores = 3))$cv.cores, 3L)
+  }
+})
+
+# mclapply() returns NULL for a worker that dies without delivering, rather
+# than a try-error. Assigning NULL into the state list deletes the subject and
+# the fit carries on one subject short, so a NULL must stop the fit.
+test_that("an undelivered worker result stops the fit", {
+  skip_on_os("windows")
+  local_mocked_bindings(
+    mclapply = function(X, FUN, ...) {
+      out <- lapply(X, FUN)
+      out[1] <- list(NULL)
+      out
+    },
+    .package = "parallel"
+  )
+  set.seed(2026)
+  d <- simLong(n = 20, n.time = 4, model = 2, family = "continuous")$data.list
+  expect_error(
+    boostmtree(
+      d$features, d$time, d$id, d$y,
+      family = "continuous", M = 3, cv.flag = TRUE, verbose = FALSE,
+      control = boostmtree.control(cv.cores = 2L)
+    ),
+    "not delivered"
+  )
 })

@@ -343,9 +343,23 @@ boostmtree.update.cv.step <- function(cv.state.q, rfsrc.obj, membership, members
     } else {
       lapply(oob, update.one)
     }
+    # A worker that errors returns a try-error; one that dies without delivering
+    # returns NULL, and assigning NULL into the state list would delete that
+    # subject. Both must stop the fit rather than corrupt it.
+    if (length(oob.update) != length(oob)) {
+      stop("Out-of-bag update returned ", length(oob.update), " results for ", length(oob), " subjects.")
+    }
     failed <- vapply(oob.update, inherits, logical(1), what = "try-error")
     if (any(failed)) {
       stop("Out-of-bag update failed in a worker: ", oob.update[[which(failed)[1]]])
+    }
+    missing <- vapply(oob.update, is.null, logical(1))
+    if (any(missing)) {
+      stop(
+        "Out-of-bag update: ", sum(missing), " worker result(s) were not delivered ",
+        "(first for subject ", oob[which(missing)[1]], "). A forked worker may have been ",
+        "killed, for example for memory; retry with fewer `control$cv.cores`."
+      )
     }
     for (k in seq_along(oob)) {
       gamma.at.m[[oob[k]]] <- oob.update[[k]]$gamma.step
