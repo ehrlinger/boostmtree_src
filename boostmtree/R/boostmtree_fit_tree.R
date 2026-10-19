@@ -367,10 +367,16 @@ boostmtree.update.cv.step <- function(cv.state.q, rfsrc.obj, membership, members
     }
   }
   if (family == "ordinal" && !is.null(previous.ordinal)) {
+    # One pmax() over each subject's whole state rather than one per (i, j)
+    # pair. pmax() is elementwise, so the values are unchanged, but its R-level
+    # setup cost paid n^2 times per step was the largest serial cost of an
+    # ordinal cross-validated fit.
+    subject.factor <- factor(
+      rep.int(seq_len(n.subject), lengths(updated[[1]])),
+      levels = seq_len(n.subject)
+    )
     updated <- lapply(seq_len(n.subject), function(i) {
-      lapply(seq_len(n.subject), function(j) {
-        pmax(updated[[i]][[j]], previous.ordinal[[i]][[j]])
-      })
+      unname(split(pmax(unlist(updated[[i]]), unlist(previous.ordinal[[i]])), subject.factor))
     })
   }
   list(

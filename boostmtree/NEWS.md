@@ -1,3 +1,18 @@
+# boostmtree 2.0.5
+
+Cleveland Clinic Foundation patched build.
+
+## Performance
+
+* Ordinal cross-validated fits spend far less time on one core. After the
+  out-of-bag update, each threshold's state is raised to the one below it with
+  `pmax()`. That ran once per (left-out, other) subject pair, n^2 calls per
+  step, and `pmax()`'s fixed R-level cost per call made it the largest serial
+  cost of the fit, about three quarters of the serial time at 600 subjects. It
+  now runs once per subject over the subject's whole state. `pmax()` is
+  elementwise, so the fit is unchanged: `mu`, `err.rate` and `m.opt` are
+  identical to 2.0.4.
+
 # boostmtree 2.0.4
 
 Cleveland Clinic Foundation patched build.
