@@ -9,7 +9,8 @@ boostmtree.control <- function(
   case.wt = NULL,
   seed = NULL,
   cv.lambda = FALSE,
-  cv.rho = TRUE
+  cv.rho = TRUE,
+  cv.cores = 1L
 ) {
   structure(
     list(
@@ -23,7 +24,8 @@ boostmtree.control <- function(
       case.wt = case.wt,
       seed = seed,
       cv.lambda = cv.lambda,
-      cv.rho = cv.rho
+      cv.rho = cv.rho,
+      cv.cores = cv.cores
     ),
     class = c("boostmtree.control", "list")
   )
@@ -94,6 +96,14 @@ boostmtree.normalize.control <- function(control) {
   }
   control$cv.lambda <- isTRUE(control$cv.lambda)
   control$cv.rho <- isTRUE(control$cv.rho)
+  if (length(control$cv.cores) != 1L || is.na(control$cv.cores) || control$cv.cores < 1) {
+    stop("`control$cv.cores` must be a single positive integer.")
+  }
+  control$cv.cores <- as.integer(control$cv.cores)
+  if (control$cv.cores > 1L && .Platform$OS.type == "windows") {
+    warning("`control$cv.cores > 1` uses forking, which Windows does not support. Using 1 core.")
+    control$cv.cores <- 1L
+  }
   if (identical(control$bootstrap, "none") && !is.null(control$sample.matrix)) {
     warning(
       "`control$sample.matrix` is ignored when `control$bootstrap = \"none\"`."

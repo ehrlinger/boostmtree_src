@@ -190,13 +190,15 @@ boostmtree.fit.gamma.cluster <- function(subject.index, l.pred.current, y.curren
     cal.d <- lapply(seq_along(subject.index), function(j) {
       boostmtree.transform.h(mu.update[[j]], family = family) %*% time.design[[subject.index[j]]]
     })
+    # D' V^-1 is shared by the Hessian and the score, so it is formed once.
+    d.t.v <- lapply(seq_along(subject.index), function(j) {
+      crossprod(cal.d[[j]], inv.v.matrix[[subject.index[j]]])
+    })
     hessian.temp <- Reduce("+", lapply(seq_along(subject.index), function(j) {
-      t(cal.d[[j]]) %*% inv.v.matrix[[subject.index[j]]] %*% cal.d[[j]]
+      d.t.v[[j]] %*% cal.d[[j]]
     }))
     score.temp <- Reduce("+", lapply(seq_along(subject.index), function(j) {
-      t(cal.d[[j]]) %*% inv.v.matrix[[subject.index[j]]] %*% (
-        y.current[[subject.index[j]]] - mu.update[[j]]
-      )
+      d.t.v[[j]] %*% (y.current[[subject.index[j]]] - mu.update[[j]])
     }))
     hessian <- hessian.temp + lambda * pen.lsq.matrix
     score <- score.temp - lambda * (pen.lsq.matrix %*% gamma.update)
@@ -291,43 +293,63 @@ boostmtree.estimate.lambda <- function(membership, node.count, y.current, mu.cur
   }
   lambda.hat
 }
-boostmtree.update.cv.step <- function(cv.state.q, rfsrc.obj, membership, membership.original, time.design, nu.vec, lambda, y.current, inv.v.matrix, family, nr.iter, pen.lsq.matrix, previous.ordinal = NULL) {
+boostmtree.update.cv.step <- function(cv.state.q, rfsrc.obj, membership, membership.original, time.design, nu.vec, lambda, y.current, inv.v.matrix, family, nr.iter, pen.lsq.matrix, previous.ordinal = NULL, cv.cores = 1L) {
   n.subject <- length(cv.state.q)
   node.count <- length(unique(membership))
   df.time.design <- ncol(time.design[[1]])
   gamma.at.m <- vector("list", n.subject)
   updated <- cv.state.q
   oob <- which(rfsrc.obj$inbag == 0)
-  if (length(oob) > 0L) {
-    for (i in oob) {
-      l.pred.ij <- cv.state.q[[i]]
-      gamma.coefficients <- lapply(seq_len(node.count), function(node.id) {
-        subject.index <- setdiff(which(membership == node.id), i)
-        if (length(subject.index) == 0L) {
-          rep(0, df.time.design)
-        } else {
-          boostmtree.fit.gamma.cluster(
-            subject.index = subject.index,
-            l.pred.current = l.pred.ij,
-            y.current = y.current,
-            time.design = time.design,
-            inv.v.matrix = inv.v.matrix,
-            lambda = lambda,
-            pen.lsq.matrix = pen.lsq.matrix,
-            family = family,
-            nr.iter = nr.iter
-          )
-        }
-      })
-      gamma.step.i <- boostmtree.make.gamma.step(gamma.coefficients, membership.original)
-      gamma.at.m[[i]] <- gamma.step.i
-      updated[[i]] <- lapply(seq_len(n.subject), function(j) {
-        row.index <- match(
-          as.character(membership.original[j]),
-          as.character(gamma.step.i$node.label)
+  # Every left-out subject sees the same node labels, so each subject's row in
+  # the coefficient matrix is looked up once per step, not once per (i, j) pair.
+  row.index <- match(
+    as.character(membership.original),
+    as.character(sort(unique(membership.original)))
+  )
+  # Each left-out subject i refits the nodes from its own state alone, so the
+  # subjects are independent within a step. The loop body draws no random
+  # numbers, which is why forking it leaves the fit unchanged.
+  update.one <- function(i) {
+    l.pred.ij <- cv.state.q[[i]]
+    gamma.coefficients <- lapply(seq_len(node.count), function(node.id) {
+      subject.index <- setdiff(which(membership == node.id), i)
+      if (length(subject.index) == 0L) {
+        rep(0, df.time.design)
+      } else {
+        boostmtree.fit.gamma.cluster(
+          subject.index = subject.index,
+          l.pred.current = l.pred.ij,
+          y.current = y.current,
+          time.design = time.design,
+          inv.v.matrix = inv.v.matrix,
+          lambda = lambda,
+          pen.lsq.matrix = pen.lsq.matrix,
+          family = family,
+          nr.iter = nr.iter
         )
-        l.pred.ij[[j]] + c(time.design[[j]] %*% (gamma.step.i$coefficients[row.index, ] * nu.vec))
+      }
+    })
+    gamma.step.i <- boostmtree.make.gamma.step(gamma.coefficients, membership.original)
+    list(
+      gamma.step = gamma.step.i,
+      l.pred = lapply(seq_len(n.subject), function(j) {
+        l.pred.ij[[j]] + c(time.design[[j]] %*% (gamma.step.i$coefficients[row.index[j], ] * nu.vec))
       })
+    )
+  }
+  if (length(oob) > 0L) {
+    oob.update <- if (cv.cores > 1L) {
+      parallel::mclapply(oob, update.one, mc.cores = cv.cores, mc.set.seed = FALSE)
+    } else {
+      lapply(oob, update.one)
+    }
+    failed <- vapply(oob.update, inherits, logical(1), what = "try-error")
+    if (any(failed)) {
+      stop("Out-of-bag update failed in a worker: ", oob.update[[which(failed)[1]]])
+    }
+    for (k in seq_along(oob)) {
+      gamma.at.m[[oob[k]]] <- oob.update[[k]]$gamma.step
+      updated[[oob[k]]] <- oob.update[[k]]$l.pred
     }
   }
   if (family == "ordinal" && !is.null(previous.ordinal)) {
@@ -705,7 +727,8 @@ boostmtree.fit.tree <- function(model.info) {
           family = model.info$family,
           nr.iter = model.info$nr.iter,
           pen.lsq.matrix = pen.lsq.matrix,
-          previous.ordinal = if (model.info$family == "ordinal" && q > 1L) cv.state$l.pred.db.i[[q - 1L]] else NULL
+          previous.ordinal = if (model.info$family == "ordinal" && q > 1L) cv.state$l.pred.db.i[[q - 1L]] else NULL,
+          cv.cores = model.info$control$cv.cores
         )
         cv.state$l.pred.db.i[[q]] <- cv.update$l.pred.db.i.q
         cv.state$gamma.i.list[[q]][[m]] <- cv.update$gamma.i.at.m
