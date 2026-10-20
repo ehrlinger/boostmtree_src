@@ -113,3 +113,55 @@ test_that("an ordinal cross-validated fit is core-invariant", {
   expect_identical(forked$err.rate, serial$err.rate)
   expect_identical(forked$m.opt, serial$m.opt)
 })
+
+# A multithreaded BLAS starts one thread per CPU in every forked worker, so the
+# parallel out-of-bag update must hold each worker, and the parent while it
+# waits, to one BLAS thread. The BLAS here is mocked: each mocked worker starts
+# at 8 threads, as a fresh fork can, and mclapply() runs in this process so the
+# calls are visible.
+test_that("the parallel CV step holds each worker and the parent to one BLAS thread", {
+  skip_on_os("windows")
+  skip_on_cran()
+  blas <- new.env()
+  blas$threads <- 8L
+  blas$set <- integer(0)
+  blas$worker.calls <- 0L
+  local_mocked_bindings(
+    blas_get_num_procs = function() blas$threads,
+    blas_set_num_threads = function(threads) {
+      blas$set <- c(blas$set, threads)
+      blas$threads <- as.integer(threads)
+      invisible(NULL)
+    },
+    .package = "RhpcBLASctl"
+  )
+  local_mocked_bindings(
+    mclapply = function(X, FUN, ...) {
+      lapply(X, function(x) {
+        blas$threads <- 8L
+        blas$worker.calls <- blas$worker.calls + 1L
+        FUN(x)
+      })
+    },
+    .package = "parallel"
+  )
+  set.seed(2026)
+  d <- simLong(n = 20, n.time = 4, model = 2, family = "continuous")$data.list
+  fit <- function(cores) {
+    boostmtree(
+      d$features, d$time, d$id, d$y,
+      family = "continuous", M = 2, cv.flag = TRUE, verbose = FALSE,
+      control = boostmtree.control(cv.cores = cores)
+    )
+  }
+  fit(2L)
+  steps <- 2L
+  expect_gt(blas$worker.calls, 0L)
+  # One parent drop and one restore per step, and one drop per worker call.
+  expect_identical(sum(blas$set == 1L), blas$worker.calls + steps)
+  expect_identical(sum(blas$set == 8L), steps)
+  expect_identical(blas$threads, 8L)
+  blas$set <- integer(0)
+  fit(1L)
+  expect_length(blas$set, 0L)
+})

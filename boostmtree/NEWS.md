@@ -1,3 +1,22 @@
+# boostmtree 2.0.7
+
+Cleveland Clinic Foundation patched build.
+
+## Bug fixes
+
+* Parallel cross-validated fits (`boostmtree.control(cv.cores > 1)`) no
+  longer oversubscribe the host on a multithreaded BLAS such as OpenBLAS or
+  MKL. 2.0.6 computes each terminal node's increment as one product over the
+  node's stacked design rows, a product large enough for a threaded BLAS to
+  start one thread per visible CPU in every forked worker: a 4-core fit at
+  1000 subjects kept about 154 CPUs busy on a 192-CPU host and spent most of
+  its time in the kernel. Each worker now runs its BLAS on one thread, and the
+  parent drops to one thread while it forks and waits, then restores its
+  previous count. Forking after a threaded BLAS has started its thread pool is
+  also a known cause of spinning and hangs. A single-threaded BLAS, such as
+  R's reference BLAS, is left alone.
+* `RhpcBLASctl` joins `Imports`; it sets the BLAS thread count.
+
 # boostmtree 2.0.6
 
 Cleveland Clinic Foundation patched build.

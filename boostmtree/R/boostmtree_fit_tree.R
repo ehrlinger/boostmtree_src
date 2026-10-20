@@ -299,6 +299,15 @@ boostmtree.estimate.lambda <- function(membership, node.count, y.current, mu.cur
   }
   lambda.hat
 }
+# Set the BLAS to one thread unless it already runs one, and return the count
+# it ran before.
+boostmtree.single.blas.thread <- function() {
+  threads <- RhpcBLASctl::blas_get_num_procs()
+  if (threads != 1L) {
+    RhpcBLASctl::blas_set_num_threads(1L)
+  }
+  threads
+}
 boostmtree.update.cv.step <- function(cv.state.q, subject.rows, rfsrc.obj, membership, membership.original, time.design, nu.vec, lambda, y.current, inv.v.matrix, family, nr.iter, pen.lsq.matrix, previous.ordinal = NULL, cv.cores = 1L) {
   n.subject <- length(cv.state.q)
   node.count <- length(unique(membership))
@@ -368,7 +377,19 @@ boostmtree.update.cv.step <- function(cv.state.q, subject.rows, rfsrc.obj, membe
   }
   if (length(oob) > 0L) {
     oob.update <- if (cv.cores > 1L) {
-      parallel::mclapply(oob, update.one, mc.cores = cv.cores, mc.set.seed = FALSE)
+      # A multithreaded BLAS (OpenBLAS, MKL) starts one thread per visible CPU
+      # in every forked worker, so cv.cores workers oversubscribe the host,
+      # and forking after the BLAS thread pool has started can spin or hang.
+      # The parent drops to one BLAS thread while it forks and waits, and each
+      # worker confirms one thread before any matrix work.
+      parent.blas.threads <- boostmtree.single.blas.thread()
+      if (parent.blas.threads != 1L) {
+        on.exit(RhpcBLASctl::blas_set_num_threads(parent.blas.threads), add = TRUE)
+      }
+      parallel::mclapply(oob, function(i) {
+        boostmtree.single.blas.thread()
+        update.one(i)
+      }, mc.cores = cv.cores, mc.set.seed = FALSE)
     } else {
       lapply(oob, update.one)
     }
