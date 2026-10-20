@@ -94,11 +94,16 @@ boostmtree.initialize.cv.state <- function(model.info) {
       boostmtree.get.mu(l.pred.cv[[q]][[i]], family = family)
     })
   })
+  # Subject i's cross-validated view of every subject's linear predictor is
+  # one flat vector, subject j's visits at subject.rows[[j]]. A list of n
+  # vectors per subject made n^2 objects per threshold, and a garbage
+  # collection in a forked worker then touched every one of them, turning the
+  # whole shared state into a private copy per core.
+  subject.rows <- split(seq_len(sum(model.info$ni)), rep.int(seq_len(n.subject), model.info$ni))
+  names(subject.rows) <- NULL
   l.pred.db.i <- lapply(seq_len(n.q), function(q) {
     lapply(seq_len(n.subject), function(i) {
-      lapply(seq_len(n.subject), function(j) {
-        rep(0, model.info$ni[j])
-      })
+      rep(0, sum(model.info$ni))
     })
   })
   gamma.i.list <- lapply(seq_len(n.q), function(q) {
@@ -133,6 +138,7 @@ boostmtree.initialize.cv.state <- function(model.info) {
     l.pred.cv = l.pred.cv,
     mu.cv = mu.cv,
     l.pred.db.i = l.pred.db.i,
+    subject.rows = subject.rows,
     gamma.i.list = gamma.i.list,
     err.rate = err.rate,
     m.opt = rep(NA_integer_, n.q),
@@ -293,7 +299,7 @@ boostmtree.estimate.lambda <- function(membership, node.count, y.current, mu.cur
   }
   lambda.hat
 }
-boostmtree.update.cv.step <- function(cv.state.q, rfsrc.obj, membership, membership.original, time.design, nu.vec, lambda, y.current, inv.v.matrix, family, nr.iter, pen.lsq.matrix, previous.ordinal = NULL, cv.cores = 1L) {
+boostmtree.update.cv.step <- function(cv.state.q, subject.rows, rfsrc.obj, membership, membership.original, time.design, nu.vec, lambda, y.current, inv.v.matrix, family, nr.iter, pen.lsq.matrix, previous.ordinal = NULL, cv.cores = 1L) {
   n.subject <- length(cv.state.q)
   node.count <- length(unique(membership))
   df.time.design <- ncol(time.design[[1]])
@@ -309,8 +315,27 @@ boostmtree.update.cv.step <- function(cv.state.q, rfsrc.obj, membership, members
   # Each left-out subject i refits the nodes from its own state alone, so the
   # subjects are independent within a step. The loop body draws no random
   # numbers, which is why forking it leaves the fit unchanged.
+  # The node refits read one subject's slice at a time, many times over, so
+  # each left-out subject's flat state is split once into per-subject pieces.
+  # The pieces live only while that subject is refitted.
+  subject.factor <- factor(
+    rep.int(seq_along(subject.rows), lengths(subject.rows)),
+    levels = seq_along(subject.rows)
+  )
+  # Every subject in a terminal node gets the same coefficient vector, so the
+  # increment for all of a node's subjects is one product with the node's
+  # stacked design rows instead of one product per subject. Each row of the
+  # stacked product is the same dot product as before, so the values are
+  # unchanged. The stacked rows and their positions in the flat state depend
+  # only on the tree, so they are built once per step and shared by every
+  # left-out subject.
+  node.subjects <- split(seq_len(n.subject), row.index)
+  node.rows <- as.integer(names(node.subjects))
+  node.design <- lapply(node.subjects, function(js) do.call(rbind, time.design[js]))
+  node.positions <- lapply(node.subjects, function(js) unlist(subject.rows[js], use.names = FALSE))
   update.one <- function(i) {
     l.pred.ij <- cv.state.q[[i]]
+    l.pred.by.subject <- split(l.pred.ij, subject.factor)
     gamma.coefficients <- lapply(seq_len(node.count), function(node.id) {
       subject.index <- setdiff(which(membership == node.id), i)
       if (length(subject.index) == 0L) {
@@ -318,7 +343,7 @@ boostmtree.update.cv.step <- function(cv.state.q, rfsrc.obj, membership, members
       } else {
         boostmtree.fit.gamma.cluster(
           subject.index = subject.index,
-          l.pred.current = l.pred.ij,
+          l.pred.current = l.pred.by.subject,
           y.current = y.current,
           time.design = time.design,
           inv.v.matrix = inv.v.matrix,
@@ -330,11 +355,15 @@ boostmtree.update.cv.step <- function(cv.state.q, rfsrc.obj, membership, members
       }
     })
     gamma.step.i <- boostmtree.make.gamma.step(gamma.coefficients, membership.original)
+    # The state is copied once and each node's increment added in place, so a
+    # left-out subject allocates one state-length vector rather than several.
+    for (k in seq_along(node.rows)) {
+      at <- node.positions[[k]]
+      l.pred.ij[at] <- l.pred.ij[at] + c(node.design[[k]] %*% (gamma.step.i$coefficients[node.rows[k], ] * nu.vec))
+    }
     list(
       gamma.step = gamma.step.i,
-      l.pred = lapply(seq_len(n.subject), function(j) {
-        l.pred.ij[[j]] + c(time.design[[j]] %*% (gamma.step.i$coefficients[row.index[j], ] * nu.vec))
-      })
+      l.pred = l.pred.ij
     )
   }
   if (length(oob) > 0L) {
@@ -371,12 +400,8 @@ boostmtree.update.cv.step <- function(cv.state.q, rfsrc.obj, membership, members
     # pair. pmax() is elementwise, so the values are unchanged, but its R-level
     # setup cost paid n^2 times per step was the largest serial cost of an
     # ordinal cross-validated fit.
-    subject.factor <- factor(
-      rep.int(seq_len(n.subject), lengths(updated[[1]])),
-      levels = seq_len(n.subject)
-    )
     updated <- lapply(seq_len(n.subject), function(i) {
-      unname(split(pmax(unlist(updated[[i]]), unlist(previous.ordinal[[i]])), subject.factor))
+      pmax(updated[[i]], previous.ordinal[[i]])
     })
   }
   list(
@@ -736,6 +761,7 @@ boostmtree.fit.tree <- function(model.info) {
       if (model.info$cv.flag) {
         cv.update <- boostmtree.update.cv.step(
           cv.state.q = cv.state$l.pred.db.i[[q]],
+          subject.rows = cv.state$subject.rows,
           rfsrc.obj = rfsrc.object,
           membership = membership,
           membership.original = membership.original,
@@ -758,13 +784,13 @@ boostmtree.fit.tree <- function(model.info) {
       if (model.info$family == "nominal") {
         cv.state$l.pred.ref.cv <- lapply(seq_len(model.info$n), function(i) {
           log((1 + Reduce("+", lapply(seq_len(model.info$n.q), function(q) {
-            exp(cv.state$l.pred.db.i[[q]][[i]][[i]])
+            exp(cv.state$l.pred.db.i[[q]][[i]][cv.state$subject.rows[[i]]])
           })))^(-1))
         })
       }
       for (q in seq_len(model.info$n.q)) {
         cv.state$l.pred.cv[[q]] <- lapply(seq_len(model.info$n), function(i) {
-          cv.state$l.pred.ref.cv[[i]] + cv.state$l.pred.db.i[[q]][[i]][[i]]
+          cv.state$l.pred.ref.cv[[i]] + cv.state$l.pred.db.i[[q]][[i]][cv.state$subject.rows[[i]]]
         })
         cv.state$mu.cv[[q]] <- lapply(seq_len(model.info$n), function(i) {
           boostmtree.get.mu(cv.state$l.pred.cv[[q]][[i]], family = model.info$family)

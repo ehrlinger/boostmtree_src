@@ -1,3 +1,28 @@
+# boostmtree 2.0.6
+
+Cleveland Clinic Foundation patched build.
+
+## Performance
+
+* Cross-validated fits on several cores use far less memory. Each subject's
+  cross-validated view of every subject's linear predictor was a list of n
+  short vectors, so the state held n^2 R objects per threshold. A garbage
+  collection inside a forked worker touches every object, which turned the
+  whole shared state into a private copy in each worker, and peak memory grew
+  with the core count. The state is now one flat vector per subject, n objects
+  in all, so a worker's collection no longer copies it, and each worker
+  returns one vector per subject. The update adds one product per terminal
+  node, over the node's stacked design rows, instead of one per subject. The
+  arithmetic is unchanged: `mu`, `err.rate` and `m.opt` are identical to
+  2.0.5. On the same number of cores a fit can take a few percent longer,
+  because R collects garbage more often when it allocates long vectors.
+
+## Tests
+
+* The ordinal branch of the cross-validated update, which raises each
+  threshold's state to the one below it, has a direct test, and an ordinal
+  cross-validated fit is checked for identical results on 1 and 2 cores.
+
 # boostmtree 2.0.5
 
 Cleveland Clinic Foundation patched build.
