@@ -4,11 +4,11 @@ Cleveland Clinic Foundation patched build.
 
 ## New features
 
-* `boostmtree()` gains `progress`, a function called as `progress(step, steps)`
-  after each boosting iteration, in the main process only. It reports progress
-  where `verbose` cannot be seen, such as a document being knitted, whose
-  output captures the progress bar. An error in the callback becomes one
-  warning and the fit carries on.
+* `boostmtree()` and `partial.plot()` take `progress`, a function called as
+  `progress(step, steps)` after each boosting iteration and after each partial-effect
+  prediction. It reports progress where `verbose` cannot be seen: a knitted document
+  captures the progress bar into its output, so a long render showed only which chunk
+  it was in. An error in the callback becomes one warning and the fit carries on.
 
 ## Bug fixes
 

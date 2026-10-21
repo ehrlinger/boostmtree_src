@@ -324,6 +324,7 @@ partial.plot.boostmtree <- function(
   file = NULL,
   verbose = TRUE,
   use.cv.flag = NULL,
+  progress = NULL,
   ...
 ) {
   if (!boostmtree.effect.is.grow.object(object)) {
@@ -359,17 +360,26 @@ partial.plot.boostmtree <- function(
     warning("`use.cv.flag = TRUE` is only supported when all fitted subjects are used; using the ordinary fitted coefficients instead.")
     use.cv.flag <- FALSE
   }
-  curves <- lapply(response.info$response.labels, function(label) {
-    stats::setNames(vector("list", length(x.var.names)), x.var.names)
-  })
-  names(curves) <- response.info$response.labels
-  for (nm in x.var.names) {
-    x.info <- boostmtree.effect.resolve.x.values(
+  progress <- boostmtree.progress.caller(progress)
+  # Every grid is resolved first, so the total number of predictions is known
+  # from the first progress call.
+  x.infos <- lapply(x.var.names, function(nm) {
+    boostmtree.effect.resolve.x.values(
       x.column = work.x[[nm]],
       x.var.values = x.var.values,
       x.var.name = nm,
       n.points = n.points
     )
+  })
+  names(x.infos) <- x.var.names
+  steps <- sum(vapply(x.infos, function(info) length(info$values), 0L))
+  step <- 0L
+  curves <- lapply(response.info$response.labels, function(label) {
+    stats::setNames(vector("list", length(x.var.names)), x.var.names)
+  })
+  names(curves) <- response.info$response.labels
+  for (nm in x.var.names) {
+    x.info <- x.infos[[nm]]
     curve.matrix <- lapply(seq_len(response.info$n.response), function(q.out) {
       matrix(
         NA_real_,
@@ -408,6 +418,10 @@ partial.plot.boostmtree <- function(
         )
       }
       rm(pred.object)
+      step <- step + 1L
+      if (!is.null(progress)) {
+        progress(step, steps)
+      }
     }
     for (q.out in seq_len(response.info$n.response)) {
       out <- data.frame(

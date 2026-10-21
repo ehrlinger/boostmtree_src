@@ -27,6 +27,7 @@ partial.plot(object, ...)
   file = NULL,
   verbose = TRUE,
   use.cv.flag = NULL,
+  progress = NULL,
   ...
 )
 
@@ -74,6 +75,10 @@ partial.plot(object, ...)
   This option is only meaningful when the model was fitted with
   \code{cv.flag = TRUE}; for partial plots it is supported only when all fitted
   subjects are used in their original order.}
+  \item{progress}{\code{NULL} (the default), or a function \code{function(step, steps)}
+  called after each prediction, one per variable and grid point. \code{steps} is the
+  total over all variables and is the same on every call. An error in it becomes one
+  warning and the computation carries on.}
   \item{x}{An object returned by \code{partial.plot}.}
   \item{...}{Further arguments passed to \code{\link{predict.boostmtree}}.}
 }

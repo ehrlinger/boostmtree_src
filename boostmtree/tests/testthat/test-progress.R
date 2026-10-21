@@ -32,6 +32,7 @@ test_that("a failing progress callback warns once and leaves the fit unchanged",
     "boom"
   )
   expect_identical(calls, 1L)
+  expect_setequal(names(b), names(a))
   # the forests in base.learner carry wall-clock timings, so they cannot be compared
   keep <- setdiff(names(a), c("call", "base.learner"))
   expect_equal(unclass(b)[keep], unclass(a)[keep])
@@ -41,4 +42,26 @@ test_that("progress must be NULL or a function", {
   d <- progress.data()
   expect_error(boostmtree(d$features, d$time, d$id, d$y, family = "continuous", M = 2, verbose = FALSE, progress = 1),
                "`progress` must be NULL or a function")
+})
+
+test_that("partial.plot reports one step per (variable, grid point), with steps fixed from the start", {
+  d <- progress.data()
+  set.seed(7)
+  fit <- boostmtree(d$features, d$time, d$id, d$y, family = "continuous", M = 5, cv.flag = TRUE, verbose = FALSE)
+  seen <- list()
+  partial.plot(fit, x.var.names = names(d$features)[1:2], n.points = 3, output = "data", verbose = FALSE,
+               progress = function(step, steps) seen[[length(seen) + 1L]] <<- c(step, steps))
+  steps <- vapply(seen, `[[`, 0, 2)
+  expect_true(length(seen) >= 2L && length(seen) <= 6L)
+  expect_true(all(steps == length(seen)))
+  expect_equal(vapply(seen, `[[`, 0, 1), seq_along(seen))
+})
+
+test_that("partial.plot's result does not depend on progress", {
+  d <- progress.data()
+  set.seed(7)
+  fit <- boostmtree(d$features, d$time, d$id, d$y, family = "continuous", M = 5, verbose = FALSE)
+  a <- partial.plot(fit, n.points = 3, output = "data", verbose = FALSE)
+  b <- partial.plot(fit, n.points = 3, output = "data", verbose = FALSE, progress = function(step, steps) NULL)
+  expect_equal(b[setdiff(names(b), "call")], a[setdiff(names(a), "call")])
 })
