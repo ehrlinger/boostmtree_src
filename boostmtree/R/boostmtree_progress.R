@@ -7,6 +7,11 @@ boostmtree.progress.caller <- function(progress) {
   state$live <- TRUE
   function(step, steps) {
     if (!state$live) return(invisible(NULL))
+    # a callback must not change the fit, so whatever random numbers it draws are put back
+    seed <- if (exists(".Random.seed", envir = globalenv(), inherits = FALSE)) get(".Random.seed", envir = globalenv())
+    on.exit(if (is.null(seed)) {
+      if (exists(".Random.seed", envir = globalenv(), inherits = FALSE)) rm(".Random.seed", envir = globalenv())
+    } else assign(".Random.seed", seed, envir = globalenv()))
     tryCatch(progress(step, steps), error = function(e) {
       state$live <- FALSE
       warning("`progress` failed and will not be called again: ", conditionMessage(e), call. = FALSE)

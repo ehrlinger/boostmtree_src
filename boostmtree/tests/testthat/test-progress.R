@@ -65,3 +65,49 @@ test_that("partial.plot's result does not depend on progress", {
   b <- partial.plot(fit, n.points = 3, output = "data", verbose = FALSE, progress = function(step, steps) NULL)
   expect_equal(b[setdiff(names(b), "call")], a[setdiff(names(a), "call")])
 })
+
+# A callback must not change the fit: one that draws random numbers, or draws and then fails, leaves the stream alone.
+progress.keep <- function(x) unclass(x)[setdiff(names(x), c("call", "base.learner"))]
+
+test_that("a progress callback that draws random numbers does not change the fit, with and without cv.flag", {
+  d <- progress.data()
+  for (cv in c(FALSE, TRUE)) {
+    set.seed(7)
+    a <- boostmtree(d$features, d$time, d$id, d$y, family = "continuous", M = 10, cv.flag = cv, verbose = FALSE, progress = NULL)
+    set.seed(7)
+    b <- boostmtree(d$features, d$time, d$id, d$y, family = "continuous", M = 10, cv.flag = cv, verbose = FALSE,
+                    progress = function(step, steps) runif(1))
+    # the forests in base.learner carry wall-clock timings, so they cannot be compared
+    expect_identical(progress.keep(b), progress.keep(a))
+  }
+})
+
+test_that("a progress callback that draws random numbers and then fails does not change the fit", {
+  d <- progress.data()
+  set.seed(7)
+  a <- boostmtree(d$features, d$time, d$id, d$y, family = "continuous", M = 10, verbose = FALSE, progress = NULL)
+  set.seed(7)
+  expect_warning(
+    b <- boostmtree(d$features, d$time, d$id, d$y, family = "continuous", M = 10, verbose = FALSE,
+                    progress = function(step, steps) {
+                      runif(1)
+                      stop("boom")
+                    }),
+    "boom"
+  )
+  expect_identical(progress.keep(b), progress.keep(a))
+})
+
+test_that("partial.plot with a random-number-drawing progress callback leaves the result and the random-number stream alone", {
+  d <- progress.data()
+  set.seed(7)
+  fit <- boostmtree(d$features, d$time, d$id, d$y, family = "continuous", M = 5, verbose = FALSE)
+  # partial.plot() draws random numbers of its own, so the stream is compared with what it leaves without a callback
+  set.seed(11)
+  a <- partial.plot(fit, n.points = 3, output = "data", verbose = FALSE, progress = NULL)
+  after.null <- .Random.seed
+  set.seed(11)
+  b <- partial.plot(fit, n.points = 3, output = "data", verbose = FALSE, progress = function(step, steps) runif(1))
+  expect_identical(.Random.seed, after.null)
+  expect_identical(b[setdiff(names(b), "call")], a[setdiff(names(a), "call")])
+})

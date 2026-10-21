@@ -8,7 +8,8 @@ Cleveland Clinic Foundation patched build.
   `progress(step, steps)` after each boosting iteration and after each partial-effect
   prediction. It reports progress where `verbose` cannot be seen: a knitted document
   captures the progress bar into its output, so a long render showed only which chunk
-  it was in. An error in the callback becomes one warning and the fit carries on.
+  it was in. An error in the callback becomes one warning and the fit carries on, and a callback cannot change the
+  fit's random-number stream.
 
 ## Bug fixes
 
