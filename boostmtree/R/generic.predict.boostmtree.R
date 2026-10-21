@@ -162,13 +162,19 @@ boostmtree.predict.time.design <- function(time.by.subject, object) {
   # quadratic in the grid length, so repeating it per subject dominated a
   # partial prediction on a long time grid.
   design <- vector("list", length(time.by.subject))
+  previous.index <- NULL
   for (i in seq_along(time.by.subject)) {
     if (i > 1L && identical(time.by.subject[[i]], time.by.subject[[i - 1L]])) {
       design[[i]] <- design[[i - 1L]]
+      next
+    }
+    time.index <- boostmtree.predict.approx.match(time.by.subject[[i]], object$time.unique)
+    if (identical(time.index, previous.index)) {
+      design[[i]] <- design[[i - 1L]]
     } else {
-      time.index <- boostmtree.predict.approx.match(time.by.subject[[i]], object$time.unique)
       design[[i]] <- object$x.tm[time.index, , drop = FALSE]
     }
+    previous.index <- time.index
   }
   design
 }
