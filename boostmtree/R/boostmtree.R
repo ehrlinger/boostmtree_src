@@ -23,9 +23,11 @@ boostmtree <- function(
   eps = 1e-5,
   mod.grad = TRUE,
   nr.iter = 3,
-  control = boostmtree.control()
+  control = boostmtree.control(),
+  progress = NULL
 ) {
   family <- boostmtree.match.family(family)
+  progress <- boostmtree.progress.caller(progress)
   na.action <- match.arg(na.action, c("na.omit", "na.impute"))
   control <- boostmtree.normalize.control(control)
   if (length(M) != 1L || is.na(M)) {
@@ -166,7 +168,8 @@ boostmtree <- function(
     nr.iter = nr.iter,
     control = control,
     na.action = na.action,
-    univariate = preprocessed$univariate
+    univariate = preprocessed$univariate,
+    progress = progress
   ))
   # ---------------------------------------------------------------------------
   # 5. Assemble the canonical return object.
