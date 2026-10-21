@@ -107,7 +107,9 @@ make.family.fit <- function(family, cv.flag = FALSE) {
     y <- cut(y, stats::quantile(y, 0:4 / 4), include.lowest = TRUE, labels = FALSE)
   }
   set.seed(7)
-  boostmtree(d$features, d$time, d$id, y, family = family, M = 8, cv.flag = cv.flag, verbose = FALSE)
+  fit <- boostmtree(d$features, d$time, d$id, y, family = family, M = 8, cv.flag = cv.flag, verbose = FALSE)
+  attr(fit, "long.data") <- list(x = d$features, tm = d$time, id = d$id, y = y)
+  fit
 }
 
 for (family in c("continuous", "binary", "ordinal", "nominal")) {
@@ -125,6 +127,27 @@ for (family in c("continuous", "binary", "ordinal", "nominal")) {
     }
   })
 }
+
+test_that("test-response predict keeps the full-path error curve and step choice", {
+  for (family in c("ordinal", "nominal")) {
+    fit <- make.family.fit(family)
+    d <- attr(fit, "long.data")
+    p <- predict(fit, x = d$x, tm = d$tm, id = d$id, y = d$y)
+    for (m in seq_len(fit$M)) {
+      mu.m <- old.mu(fit, p, rep(m, fit$n.q))
+      for (q in seq_len(fit$n.q)) {
+        expect_identical(
+          p$err.rate[[q]][m, ],
+          c(
+            l1 = boostmtree:::boostmtree.l1.dist(p$y.org[[q]], mu.m[[q]]),
+            l2 = boostmtree:::boostmtree.l2.dist(p$y.org[[q]], mu.m[[q]])
+          ) / fit$y.sd
+        )
+      }
+    }
+    expect_identical(p$mu, old.mu(fit, p, p$m.opt))
+  }
+})
 
 test_that("every subject on a shared time grid shares one design matrix", {
   fit <- make.family.fit("continuous")
