@@ -359,41 +359,47 @@ partial.plot.boostmtree <- function(
     warning("`use.cv.flag = TRUE` is only supported when all fitted subjects are used; using the ordinary fitted coefficients instead.")
     use.cv.flag <- FALSE
   }
-  curves <- vector("list", response.info$n.response)
+  curves <- lapply(response.info$response.labels, function(label) {
+    stats::setNames(vector("list", length(x.var.names)), x.var.names)
+  })
   names(curves) <- response.info$response.labels
-  for (q.out in seq_len(response.info$n.response)) {
-    q.index <- response.info$response.index[q.out]
-    response.curves <- lapply(x.var.names, function(nm) {
-      x.info <- boostmtree.effect.resolve.x.values(
-        x.column = work.x[[nm]],
-        x.var.values = x.var.values,
-        x.var.name = nm,
-        n.points = n.points
-      )
-      curve.matrix <- matrix(
+  for (nm in x.var.names) {
+    x.info <- boostmtree.effect.resolve.x.values(
+      x.column = work.x[[nm]],
+      x.var.values = x.var.values,
+      x.var.name = nm,
+      n.points = n.points
+    )
+    curve.matrix <- lapply(seq_len(response.info$n.response), function(q.out) {
+      matrix(
         NA_real_,
         nrow = length(x.info$values),
         ncol = length(time.info$index)
       )
-      for (k in seq_along(x.info$values)) {
-        new.x <- work.x
-        new.x[[nm]] <- boostmtree.effect.assign.column(new.x[[nm]], x.info$values[[k]])
-        pred.object <- predict(
-          object,
-          x = new.x,
-          tm = time.info$observed.time,
-          M = M,
-          partial = TRUE,
-          use.cv.flag = use.cv.flag,
-          ...
-        )
+    })
+    for (k in seq_along(x.info$values)) {
+      new.x <- work.x
+      new.x[[nm]] <- boostmtree.effect.assign.column(new.x[[nm]], x.info$values[[k]])
+      # One prediction carries every response component. Only `mu` is read, so
+      # the extrapolated `muhat` curves are skipped.
+      pred.object <- generic.predict.boostmtree(
+        object,
+        x = new.x,
+        tm = time.info$observed.time,
+        M = M,
+        partial = TRUE,
+        use.cv.flag = use.cv.flag,
+        .extrapolate = FALSE,
+        ...
+      )
+      for (q.out in seq_len(response.info$n.response)) {
         pred.response <- boostmtree.effect.extract.partial.response(
           pred.object = pred.object,
           object = object,
-          q.index = q.index,
+          q.index = response.info$response.index[q.out],
           prob.class = response.info$prob.class
         )
-        curve.matrix[k, ] <- colMeans(
+        curve.matrix[[q.out]][k, ] <- colMeans(
           do.call(
             rbind,
             lapply(pred.response, function(subject.curve) subject.curve[time.info$index])
@@ -401,17 +407,18 @@ partial.plot.boostmtree <- function(
           na.rm = TRUE
         )
       }
+      rm(pred.object)
+    }
+    for (q.out in seq_len(response.info$n.response)) {
       out <- data.frame(
         x = x.info$display,
-        curve.matrix,
+        curve.matrix[[q.out]],
         check.names = FALSE,
         stringsAsFactors = FALSE
       )
       names(out) <- c("x", time.info$column.names)
-      out
-    })
-    names(response.curves) <- x.var.names
-    curves[[q.out]] <- response.curves
+      curves[[q.out]][[nm]] <- out
+    }
   }
   result <- list(
     curves = boostmtree.effect.flatten.single.response(curves, response.info$n.response),
