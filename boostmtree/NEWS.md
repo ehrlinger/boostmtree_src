@@ -21,7 +21,16 @@ Cleveland Clinic Foundation patched build.
 * `partial.plot()` predicts each grid value once and reads every requested
   response component from that prediction. It used to repeat the whole
   prediction for each component, three times over for a four-level ordinal
-  response. The two-value synthetic ordinal plot above fell from 87 s to 26 s.
+  response. It also skips the extrapolated `muhat` curves, which it never
+  reads and which cost about as much again as the curves it does read.
+  `predict()` itself still returns them.
+* `predict()` matches each subject's times to the fitted time grid once per
+  distinct time vector instead of once per subject. The nearest-time match is
+  quadratic in the grid length, and under `partial = TRUE` every subject
+  carries the whole grid, so it was about 90% of a partial prediction's time.
+  With this and the changes above, the two-value synthetic ordinal
+  `partial.plot()` fell from 87 s to 2.4 s, and one partial prediction from
+  15.6 s to 2.2 s.
 * Subjects on the same time grid share one time-design matrix in the returned
   predict object instead of each holding a copy.
 

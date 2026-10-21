@@ -157,17 +157,17 @@ boostmtree.predict.match.gamma <- function(gamma.step, membership.label) {
   gamma.step$coefficients[row.index, , drop = FALSE]
 }
 boostmtree.predict.time.design <- function(time.by.subject, object) {
-  time.index <- lapply(time.by.subject, function(time.i) {
-    boostmtree.predict.approx.match(time.i, object$time.unique)
-  })
   # Subjects sharing a time vector (every subject, under `partial = TRUE`)
-  # share one design matrix instead of each holding a copy.
-  design <- vector("list", length(time.index))
-  for (i in seq_along(time.index)) {
-    if (i > 1L && identical(time.index[[i]], time.index[[i - 1L]])) {
+  # share one nearest-time match and one design matrix. The match is
+  # quadratic in the grid length, so repeating it per subject dominated a
+  # partial prediction on a long time grid.
+  design <- vector("list", length(time.by.subject))
+  for (i in seq_along(time.by.subject)) {
+    if (i > 1L && identical(time.by.subject[[i]], time.by.subject[[i - 1L]])) {
       design[[i]] <- design[[i - 1L]]
     } else {
-      design[[i]] <- object$x.tm[time.index[[i]], , drop = FALSE]
+      time.index <- boostmtree.predict.approx.match(time.by.subject[[i]], object$time.unique)
+      design[[i]] <- object$x.tm[time.index, , drop = FALSE]
     }
   }
   design
@@ -403,6 +403,7 @@ generic.predict.boostmtree <- function(
   eps = 1e-5,
   use.cv.flag = FALSE,
   partial = FALSE,
+  .extrapolate = TRUE,
   ...
 ) {
   if (missing(object)) {
@@ -576,7 +577,9 @@ generic.predict.boostmtree <- function(
     y.levels = object$y.levels,
     q.set.index = boostmtree.predict.q.set.index(object)
   )
-  extrapolated <- if (!use.cv.flag) {
+  # `.extrapolate = FALSE` is internal: partial.plot() reads only `mu`, and the
+  # extrapolated grid curves cost about as much again as the main path.
+  extrapolated <- if (!use.cv.flag && isTRUE(.extrapolate)) {
     boostmtree.predict.extrapolate(
       object = object,
       membership = membership,

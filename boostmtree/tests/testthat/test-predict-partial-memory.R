@@ -149,9 +149,19 @@ test_that("test-response predict keeps the full-path error curve and step choice
   }
 })
 
-test_that("every subject on a shared time grid shares one design matrix", {
+test_that("every subject on a shared time grid shares one time match and design matrix", {
   fit <- make.family.fit("continuous")
+  calls <- new.env()
+  calls$n <- 0L
+  approx.match <- boostmtree:::boostmtree.predict.approx.match
+  local_mocked_bindings(
+    boostmtree.predict.approx.match = function(x, y) {
+      calls$n <- calls$n + 1L
+      approx.match(x, y)
+    }
+  )
   p <- predict(fit, x = fit$x, tm = fit$time.unique, partial = TRUE)
+  expect_identical(calls$n, 1L)
   expect_identical(p$time.design[[1]], fit$x.tm[seq_len(nrow(fit$x.tm)), , drop = FALSE])
   expect_true(all(vapply(p$time.design, identical, logical(1), p$time.design[[1]])))
 })
@@ -176,4 +186,19 @@ test_that("partial.plot fills every response component from one prediction per g
       }
     }
   }
+})
+
+test_that("partial.plot skips the extrapolated curves, and predict() still computes them", {
+  fit <- make.family.fit("ordinal")
+  reference <- partial.plot(fit, x.var.names = "x1", n.points = 3, output = "data")
+  local_mocked_bindings(
+    boostmtree.predict.extrapolate = function(...) stop("extrapolate was called")
+  )
+  skipped <- partial.plot(fit, x.var.names = "x1", n.points = 3, output = "data")
+  reference$call <- skipped$call <- NULL
+  expect_identical(skipped, reference)
+  expect_error(
+    predict(fit, x = fit$x, tm = fit$time.unique, partial = TRUE),
+    "extrapolate was called"
+  )
 })

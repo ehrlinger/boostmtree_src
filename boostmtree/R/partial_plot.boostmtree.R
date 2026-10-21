@@ -380,14 +380,16 @@ partial.plot.boostmtree <- function(
     for (k in seq_along(x.info$values)) {
       new.x <- work.x
       new.x[[nm]] <- boostmtree.effect.assign.column(new.x[[nm]], x.info$values[[k]])
-      # One prediction carries every response component.
-      pred.object <- predict(
+      # One prediction carries every response component. Only `mu` is read, so
+      # the extrapolated `muhat` curves are skipped.
+      pred.object <- generic.predict.boostmtree(
         object,
         x = new.x,
         tm = time.info$observed.time,
         M = M,
         partial = TRUE,
         use.cv.flag = use.cv.flag,
+        .extrapolate = FALSE,
         ...
       )
       for (q.out in seq_len(response.info$n.response)) {
