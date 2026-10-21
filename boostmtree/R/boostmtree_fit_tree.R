@@ -866,6 +866,9 @@ boostmtree.fit.tree <- function(model.info) {
         lambda.matrix[m, q] <- lambda[q]
       }
     }
+    if (!is.null(model.info$progress)) {
+      model.info$progress(m, model.info$M)
+    }
   }
   if (isTRUE(model.info$cv.flag) && any(oob.subject.count == 0L)) {
     warning(

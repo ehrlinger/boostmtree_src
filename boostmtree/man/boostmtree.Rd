@@ -38,7 +38,8 @@ boostmtree(
   eps = 1e-5,
   mod.grad = TRUE,
   nr.iter = 3,
-  control = boostmtree.control()
+  control = boostmtree.control(),
+  progress = NULL
 )
 }
 
@@ -110,6 +111,13 @@ boostmtree(
   penalty matrix.}
 
   \item{verbose}{Logical; should progress output be printed?}
+
+  \item{progress}{\code{NULL} (the default), or a function \code{function(step, steps)}
+    called after each boosting iteration with the iteration done and \code{M}. It is called
+    in the main process only, never from a cross-validation worker. Use it to report
+    progress where \code{verbose} cannot be seen, such as a document being knitted, which
+    captures the progress bar into its output. An error in it becomes one warning and the
+    fit carries on.}
 
  \item{cv.flag}{Logical; should out-of-bag cross-validation be tracked to
   select an optimal stopping iteration? When \code{cv.flag = TRUE}, the fit
