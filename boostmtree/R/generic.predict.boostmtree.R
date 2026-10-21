@@ -160,24 +160,124 @@ boostmtree.predict.time.design <- function(time.by.subject, object) {
   time.index <- lapply(time.by.subject, function(time.i) {
     boostmtree.predict.approx.match(time.i, object$time.unique)
   })
-  lapply(time.index, function(index.i) {
-    object$x.tm[index.i, , drop = FALSE]
-  })
+  # Subjects sharing a time vector (every subject, under `partial = TRUE`)
+  # share one design matrix instead of each holding a copy.
+  design <- vector("list", length(time.index))
+  for (i in seq_along(time.index)) {
+    if (i > 1L && identical(time.index[[i]], time.index[[i - 1L]])) {
+      design[[i]] <- design[[i - 1L]]
+    } else {
+      design[[i]] <- object$x.tm[time.index[[i]], , drop = FALSE]
+    }
+  }
+  design
 }
-boostmtree.predict.reference.path <- function(l.pred.db.list, family, q.total, n, ni, m.max) {
+boostmtree.predict.reference.step <- function(l.pred.db, family, n, ni) {
   if (identical(family, "nominal")) {
-    lapply(seq_len(m.max), function(m) {
-      lapply(seq_len(n), function(i) {
-        log((1 + Reduce("+", lapply(seq_along(l.pred.db.list), function(q) {
-          exp(l.pred.db.list[[q]][[m]][[i]])
-        })))^(-1))
-      })
+    lapply(seq_len(n), function(i) {
+      log((1 + Reduce("+", lapply(seq_along(l.pred.db), function(q) {
+        exp(l.pred.db[[q]][[i]])
+      })))^(-1))
     })
   } else {
-    lapply(seq_len(m.max), function(m) {
-      lapply(seq_len(n), function(i) rep(0, ni[i]))
-    })
+    lapply(seq_len(n), function(i) rep(0, ni[i]))
   }
+}
+# Walks the boosting path one step at a time, holding only the current step's
+# cumulative linear predictor for every response component. Returns the fitted
+# means at step `keep.m[q]` and, when `y.org` is supplied, the l1/l2 error at
+# every step. Holding the whole path (n.q x m.stop x n vectors) at once does not
+# fit in memory when every subject is predicted on a long time grid.
+boostmtree.predict.accumulate <- function(
+  object,
+  gamma,
+  membership,
+  oob.list,
+  time.design,
+  n,
+  ni,
+  nu.vec,
+  m.stop,
+  use.cv.flag,
+  keep.m = NULL,
+  y.org = NULL
+) {
+  n.q <- object$n.q
+  ordinal <- identical(object$family, "ordinal")
+  l.pred.db <- lapply(seq_len(n.q), function(q) {
+    lapply(seq_len(n), function(i) rep(0, ni[i]))
+  })
+  mu.keep <- vector("list", n.q)
+  err <- if (!is.null(y.org)) {
+    lapply(seq_len(n.q), function(q) {
+      matrix(NA_real_, nrow = m.stop, ncol = 2L, dimnames = list(NULL, c("l1", "l2")))
+    })
+  } else {
+    NULL
+  }
+  for (m in seq_len(m.stop)) {
+    for (q in seq_len(n.q)) {
+      previous <- l.pred.db[[q]]
+      if (!use.cv.flag) {
+        gamma.by.subject <- boostmtree.predict.match.gamma(
+          gamma.step = gamma[[q]][[m]],
+          membership.label = membership[[q]][[m]]
+        )
+        l.pred.db[[q]] <- lapply(seq_len(n), function(i) {
+          updated <- previous[[i]] + c(time.design[[i]] %*% c(gamma.by.subject[i, ] * nu.vec))
+          if (ordinal && q > 1L) {
+            pmax(updated, l.pred.db[[q - 1L]][[i]])
+          } else {
+            updated
+          }
+        })
+      } else {
+        l.pred.db[[q]] <- lapply(seq_len(n), function(i) {
+          updated <- previous[[i]]
+          if (i %in% oob.list[[q]][[m]]) {
+            gamma.step <- gamma[[q]][[m]][[i]]
+            membership.index <- match(i, oob.list[[q]][[m]])
+            gamma.i <- boostmtree.predict.match.gamma(
+              gamma.step = gamma.step,
+              membership.label = membership[[q]][[m]][membership.index]
+            )
+            updated <- updated + c(time.design[[i]] %*% c(gamma.i[1, ] * nu.vec))
+          }
+          if (ordinal && q > 1L) {
+            pmax(updated, l.pred.db[[q - 1L]][[i]])
+          } else {
+            updated
+          }
+        })
+      }
+    }
+    keep.q <- vapply(seq_len(n.q), function(q) isTRUE(keep.m[q] == m), logical(1))
+    if (is.null(err) && !any(keep.q)) {
+      next
+    }
+    l.pred.ref <- boostmtree.predict.reference.step(l.pred.db, family = object$family, n = n, ni = ni)
+    for (q in seq_len(n.q)) {
+      if (is.null(err) && !keep.q[q]) {
+        next
+      }
+      mu.q <- lapply(seq_len(n), function(i) {
+        boostmtree.get.mu(
+          (l.pred.db[[q]][[i]] + l.pred.ref[[i]]) * object$y.sd + object$y.mean,
+          family = object$family
+        )
+      })
+      if (!is.null(err)) {
+        err[[q]][m, ] <- c(
+          boostmtree.l1.dist(y.org[[q]], mu.q),
+          boostmtree.l2.dist(y.org[[q]], mu.q)
+        )
+      }
+      if (keep.q[q]) {
+        mu.keep[[q]] <- mu.q
+      }
+    }
+  }
+  list(mu = mu.keep, err = err)
 }
 boostmtree.predict.select.m <- function(object, err.rate, M, eps) {
   n.q <- object$n.q
@@ -238,29 +338,32 @@ boostmtree.predict.extrapolate <- function(object, membership, gamma, m.opt) {
   nu.vec <- c(nu[1], rep(nu[2], ncol(object$x.tm) - 1L))
   time.grid <- object$time.unique
   x.tm.grid <- object$x.tm
-  l.pred.db.hat.temp <- lapply(seq_len(n.q), function(q) {
-    lapply(seq_len(n), function(i) {
-      lapply(seq_len(m.opt[q]), function(m) {
-        gamma.step <- gamma[[q]][[m]]
-        gamma.i <- boostmtree.predict.match.gamma(gamma.step, membership[[q]][[m]][i])
-        as.vector(x.tm.grid %*% c(gamma.i[1, ] * nu.vec))
-      })
-    })
-  })
-  l.pred.db.hat <- lapply(seq_len(n.q), function(q) {
-    lapply(seq_len(n), function(i) {
-      temp.path <- l.pred.db.hat.temp[[q]][[i]]
-      if (identical(object$family, "ordinal") && q > 1L) {
-        for (m in seq_len(m.opt[q])) {
-          temp.path[[m]] <- pmax(
-            temp.path[[m]],
-            l.pred.db.hat.temp[[q - 1L]][[i]][[m]]
-          )
-        }
+  # Running sum over the boosting steps, one step at a time. The ordinal floor
+  # at step m is taken against the previous component's raw step-m increment,
+  # not its floored one, so only that raw increment is carried across q.
+  ordinal <- identical(object$family, "ordinal")
+  l.pred.db.hat <- lapply(seq_len(n.q), function(q) vector("list", n))
+  for (m in seq_len(max(m.opt))) {
+    gamma.by.subject <- lapply(seq_len(n.q), function(q) {
+      if (m <= m.opt[q]) {
+        boostmtree.predict.match.gamma(gamma[[q]][[m]], membership[[q]][[m]])
+      } else {
+        NULL
       }
-      Reduce("+", temp.path)
     })
-  })
+    for (i in seq_len(n)) {
+      raw.previous <- NULL
+      for (q in seq_len(n.q)) {
+        if (m > m.opt[q]) {
+          next
+        }
+        raw <- as.vector(x.tm.grid %*% c(gamma.by.subject[[q]][i, ] * nu.vec))
+        step <- if (ordinal && q > 1L) pmax(raw, raw.previous) else raw
+        l.pred.db.hat[[q]][[i]] <- if (m == 1L) step else l.pred.db.hat[[q]][[i]] + step
+        raw.previous <- raw
+      }
+    }
+  }
   l.pred.ref.hat <- if (identical(object$family, "nominal")) {
     lapply(seq_len(n), function(i) {
       log((1 + Reduce("+", lapply(seq_len(n.q), function(q) {
@@ -270,16 +373,15 @@ boostmtree.predict.extrapolate <- function(object, membership, gamma, m.opt) {
   } else {
     lapply(seq_len(n), function(i) rep(0, nrow(x.tm.grid)))
   }
-  l.pred.hat <- lapply(seq_len(n.q), function(q) {
-    lapply(seq_len(n), function(i) {
-      (l.pred.db.hat[[q]][[i]] + l.pred.ref.hat[[i]]) * object$y.sd + object$y.mean
-    })
-  })
   muhat <- lapply(seq_len(n.q), function(q) {
     lapply(seq_len(n), function(i) {
-      boostmtree.get.mu(l.pred.hat[[q]][[i]], family = object$family)
+      boostmtree.get.mu(
+        (l.pred.db.hat[[q]][[i]] + l.pred.ref.hat[[i]]) * object$y.sd + object$y.mean,
+        family = object$family
+      )
     })
   })
+  rm(l.pred.db.hat, l.pred.ref.hat)
   list(
     time.grid = time.grid,
     muhat = muhat,
@@ -430,102 +532,33 @@ generic.predict.boostmtree <- function(
       }
     }
   }
-  l.pred.db.list <- lapply(seq_len(object$n.q), function(q) {
-    lapply(seq_len(m.max), function(m) {
-      lapply(seq_len(n), function(i) rep(0, ni[i]))
-    })
-  })
   nu <- object$nu
   if (length(nu) == 1L) {
     nu <- rep(nu, 2L)
   }
   df.time.design <- ncol(object$x.tm)
   nu.vec <- c(nu[1], rep(nu[2], df.time.design - 1L))
-  for (q in seq_len(object$n.q)) {
-    for (m in seq_len(m.max)) {
-      if (!use.cv.flag) {
-        gamma.step <- gamma[[q]][[m]]
-        gamma.by.subject <- boostmtree.predict.match.gamma(
-          gamma.step = gamma.step,
-          membership.label = membership[[q]][[m]]
-        )
-        previous <- if (m == 1L) {
-          lapply(seq_len(n), function(i) rep(0, ni[i]))
-        } else {
-          l.pred.db.list[[q]][[m - 1L]]
-        }
-        l.pred.db.list[[q]][[m]] <- lapply(seq_len(n), function(i) {
-          updated <- previous[[i]] + c(time.design[[i]] %*% c(gamma.by.subject[i, ] * nu.vec))
-          if (identical(object$family, "ordinal") && q > 1L) {
-            pmax(updated, l.pred.db.list[[q - 1L]][[m]][[i]])
-          } else {
-            updated
-          }
-        })
-      } else {
-        previous <- if (m == 1L) {
-          lapply(seq_len(n), function(i) rep(0, ni[i]))
-        } else {
-          l.pred.db.list[[q]][[m - 1L]]
-        }
-        l.pred.db.list[[q]][[m]] <- lapply(seq_len(n), function(i) {
-          updated <- previous[[i]]
-          if (i %in% oob.list[[q]][[m]]) {
-            gamma.step <- gamma[[q]][[m]][[i]]
-            membership.index <- match(i, oob.list[[q]][[m]])
-            gamma.i <- boostmtree.predict.match.gamma(
-              gamma.step = gamma.step,
-              membership.label = membership[[q]][[m]][membership.index]
-            )
-            updated <- updated + c(time.design[[i]] %*% c(gamma.i[1, ] * nu.vec))
-          }
-          if (identical(object$family, "ordinal") && q > 1L) {
-            pmax(updated, l.pred.db.list[[q - 1L]][[m]][[i]])
-          } else {
-            updated
-          }
-        })
-      }
-    }
+  accumulate <- function(m.stop, keep.m = NULL, y.org = NULL) {
+    boostmtree.predict.accumulate(
+      object = object,
+      gamma = gamma,
+      membership = membership,
+      oob.list = oob.list,
+      time.design = time.design,
+      n = n,
+      ni = ni,
+      nu.vec = nu.vec,
+      m.stop = m.stop,
+      use.cv.flag = use.cv.flag,
+      keep.m = keep.m,
+      y.org = y.org
+    )
   }
-  l.pred.ref <- boostmtree.predict.reference.path(
-    l.pred.db.list = l.pred.db.list,
-    family = object$family,
-    q.total = object$q.total,
-    n = n,
-    ni = ni,
-    m.max = m.max
-  )
-  l.pred.list <- lapply(seq_len(object$n.q), function(q) {
-    lapply(seq_len(m.max), function(m) {
-      lapply(seq_len(n), function(i) {
-        (l.pred.db.list[[q]][[m]][[i]] + l.pred.ref[[m]][[i]]) * object$y.sd + object$y.mean
-      })
-    })
-  })
-  mu.list <- lapply(seq_len(object$n.q), function(q) {
-    lapply(seq_len(m.max), function(m) {
-      lapply(seq_len(n), function(i) {
-        boostmtree.get.mu(l.pred.list[[q]][[m]][[i]], family = object$family)
-      })
-    })
-  })
+  # The error path picks m.opt, so with test responses the boosting path is
+  # walked once for the errors and again up to m.opt for the fitted means.
   err.rate.raw <- NULL
   if (test.flag) {
-    err.rate.raw <- lapply(seq_len(object$n.q), function(q) {
-      err <- matrix(
-        vapply(seq_len(m.max), function(m) {
-          c(
-            boostmtree.l1.dist(response.info$y.org[[q]], mu.list[[q]][[m]]),
-            boostmtree.l2.dist(response.info$y.org[[q]], mu.list[[q]][[m]])
-          )
-        }, numeric(2)),
-        ncol = 2L,
-        byrow = TRUE
-      )
-      colnames(err) <- c("l1", "l2")
-      err
-    })
+    err.rate.raw <- accumulate(m.max, y.org = response.info$y.org)$err
   }
   m.opt <- boostmtree.predict.select.m(
     object = object,
@@ -533,9 +566,10 @@ generic.predict.boostmtree <- function(
     M = M,
     eps = eps
   )
-  mu <- lapply(seq_len(object$n.q), function(q) {
-    mu.list[[q]][[m.opt[q]]]
-  })
+  if (any(m.opt > m.max)) {
+    stop("Selected boosting step exceeds the number of available steps.")
+  }
+  mu <- accumulate(max(m.opt), keep.m = m.opt)$mu
   prob.class <- boostmtree.build.prob.class(
     mu = mu,
     family = object$family,

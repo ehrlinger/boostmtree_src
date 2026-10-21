@@ -1,3 +1,30 @@
+# boostmtree 2.0.8
+
+Cleveland Clinic Foundation patched build.
+
+## Bug fixes
+
+* `predict(..., partial = TRUE)` and `partial.plot()` no longer run out of
+  memory on long time grids. `predict()` held every boosting step's linear
+  predictor for every subject at every grid time at once, n.q x M x n vectors,
+  in four such lists: the step path, its linear and mean transforms, and the
+  extrapolated path in `boostmtree.predict.extrapolate()`. `partial.plot()`
+  predicts every subject on every observed time, so an ordinal study with
+  5,491 patients, 4,139 unique visit times and M = 100 asked for about 55 GB
+  per list per grid value, and R died. Both paths now walk the boosting steps
+  one at a time and keep a running sum, so a call holds about n.q x n vectors
+  of the grid length. On a synthetic ordinal fit (250 subjects, 3,482 unique
+  times, M = 30) peak memory for one partial prediction fell from 3.2 GB to
+  0.4 GB. Results are unchanged, bit for bit. With test responses (`y`
+  supplied), the path is walked twice, once for the error curve that picks
+  the step and once for the fitted means at that step.
+* `partial.plot()` predicts each grid value once and reads every requested
+  response component from that prediction. It used to repeat the whole
+  prediction for each component, three times over for a four-level ordinal
+  response. The two-value synthetic ordinal plot above fell from 87 s to 26 s.
+* Subjects on the same time grid share one time-design matrix in the returned
+  predict object instead of each holding a copy.
+
 # boostmtree 2.0.7
 
 Cleveland Clinic Foundation patched build.
