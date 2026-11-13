@@ -1,5 +1,5 @@
 Package: boostmtree
-Version: 2.0.9
+Version: 2.0.10
 Date: 2026-11-13
 Title: Boosted Multivariate Trees for Longitudinal Data
 Authors@R: c(person("Hemant", "Ishwaran", email = "hemant.ishwaran@gmail.com", role = "aut"),

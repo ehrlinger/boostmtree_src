@@ -72,3 +72,51 @@ test_that("the NA-removal path keeps covariates aligned with tm, id and y", {
   expect_equal(vapply(p$time, length, integer(1)), p$ni)
   expect_true(all(is.finite(unlist(p$mu))))
 })
+
+# With `x` alone (no `tm` and `id`), and with `partial = TRUE`, an NA row used
+# to reach randomForestSRC, which dropped it, so the terminal-node lookup no
+# longer lined up with the rows and predict() stopped with "subscript out of
+# bounds". The row is now dropped first, with a warning, and `id.unique` names
+# the rows of `x` that were kept.
+test_that("an na.omit fit drops NA rows of x given without tm and id", {
+  d <- make.longitudinal()
+  fit <- fit.omit(d)
+  x <- d$features[!duplicated(d$id), , drop = FALSE][1:6, , drop = FALSE]
+  x.na <- x
+  x.na[2L, 1L] <- NA_real_
+  clean <- predict(fit, x = x[-2L, , drop = FALSE])
+  expect_warning(p <- predict(fit, x = x.na), "1 row\\(s\\) of `x`")
+  expect_identical(p$id.unique, c(1L, 3:6))
+  expect_identical(p$muhat, clean$muhat)
+  tm <- sort(unique(d$time))
+  clean <- predict(fit, x = x[-2L, , drop = FALSE], tm = tm, partial = TRUE)
+  expect_warning(p <- predict(fit, x = x.na, tm = tm, partial = TRUE), "1 row\\(s\\) of `x`")
+  expect_identical(p$id.unique, c(1L, 3:6))
+  expect_identical(p$muhat, clean$muhat)
+  x.na[, 1L] <- NA_real_
+  expect_error(predict(fit, x = x.na), "Every row of `x` has a missing covariate")
+})
+
+# The cross-validated coefficients are looked up by fitted subject position.
+# One extra row plus one dropped NA row leaves the count equal to the fitted
+# subject count, but the rows are no longer the fitted set in order, so
+# use.cv.flag must fall back to the ordinary coefficients.
+test_that("a dropped NA row turns off use.cv.flag for partial predictions", {
+  d <- make.longitudinal(n = 20, n.time = 3)
+  set.seed(11)
+  fit <- boostmtree(d$features, d$time, d$id, d$y, family = "continuous", M = 5,
+                    cv.flag = TRUE, verbose = FALSE, na.action = "na.omit")
+  tm <- sort(unique(d$time))
+  x <- rbind(fit$x, fit$x[1L, , drop = FALSE])
+  x[2L, 1L] <- NA_real_
+  warnings <- character(0)
+  p <- withCallingHandlers(
+    predict(fit, x = x, tm = tm, partial = TRUE, use.cv.flag = TRUE),
+    warning = function(w) {
+      warnings <<- c(warnings, conditionMessage(w))
+      invokeRestart("muffleWarning")
+    }
+  )
+  expect_true(any(grepl("using the ordinary fitted coefficients", warnings)))
+  expect_identical(p$muhat, suppressWarnings(predict(fit, x = x, tm = tm, partial = TRUE))$muhat)
+})

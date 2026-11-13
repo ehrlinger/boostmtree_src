@@ -29,6 +29,11 @@ test_that("cv.cores > 1 gives the identical cross-validated fit", {
 test_that("cv.cores is validated", {
   expect_error(boostmtree:::boostmtree.normalize.control(boostmtree.control(cv.cores = 0)), "cv.cores")
   expect_error(boostmtree:::boostmtree.normalize.control(boostmtree.control(cv.cores = NA)), "cv.cores")
+  expect_error(boostmtree:::boostmtree.normalize.control(boostmtree.control(cv.cores = Inf)), "cv.cores")
+  for (bad in list("garbage", 2147483648, 1.5, c(2, 3), -Inf)) {
+    expect_error(boostmtree:::boostmtree.normalize.control(boostmtree.control(cv.cores = bad)), "cv.cores")
+  }
+  expect_identical(boostmtree:::boostmtree.normalize.control(boostmtree.control(cv.cores = "1"))$cv.cores, 1L)
   if (.Platform$OS.type == "windows") {
     expect_warning(
       ctl <- boostmtree:::boostmtree.normalize.control(boostmtree.control(cv.cores = 3)),
