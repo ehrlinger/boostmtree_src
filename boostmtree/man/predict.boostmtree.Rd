@@ -131,7 +131,11 @@ An object of class \code{c("boostmtree", "predict", ...)} with components:
   \item{id}{Long-format subject identifier corresponding to the supplied
   prediction data.}
 
-  \item{id.unique}{Unique subject identifiers in subject order.}
+  \item{id.unique}{Unique subject identifiers in subject order. When \code{x}
+  is given without \code{tm} and \code{id}, these are the row numbers of
+  \code{x}; for a model fitted with \code{na.action = "na.omit"}, rows with a
+  missing covariate are dropped with a warning, and \code{id.unique} names the
+  rows kept.}
 
   \item{k}{Number of terminal nodes requested during fitting.}
 

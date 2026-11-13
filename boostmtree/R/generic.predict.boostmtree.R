@@ -31,6 +31,26 @@ boostmtree.predict.validate.x <- function(x, training.names) {
   }
   x
 }
+# For an na.omit fit, randomForestSRC drops covariate rows that hold an NA, so
+# a row of `x` given without `tm` and `id` must be dropped here too, or the
+# terminal-node lookup no longer lines up with the rows. Returns the row numbers
+# kept; `id.unique` reports them so predictions can be matched back to `x`.
+boostmtree.predict.keep.rows <- function(x.subject, na.action) {
+  keep <- seq_len(nrow(x.subject))
+  if (identical(na.action, "na.omit")) {
+    keep <- which(stats::complete.cases(x.subject))
+    if (length(keep) == 0L) {
+      stop("Every row of `x` has a missing covariate, and the model was fitted with `na.action = \"na.omit\"`.")
+    }
+    if (length(keep) < nrow(x.subject)) {
+      warning(
+        nrow(x.subject) - length(keep), " row(s) of `x` with missing covariates were dropped ",
+        "(the model was fitted with `na.action = \"na.omit\"`); `id.unique` gives the rows kept."
+      )
+    }
+  }
+  keep
+}
 boostmtree.predict.prepare.long.data <- function(x, tm, id, y = NULL, na.action, training.names) {
   x <- boostmtree.predict.validate.x(x, training.names = training.names)
   if (length(tm) != nrow(x)) {
@@ -449,9 +469,10 @@ generic.predict.boostmtree <- function(
     y.raw <- NULL
   } else if (partial) {
     x.subject <- boostmtree.predict.validate.x(x, training.names = training.names)
+    id.unique <- boostmtree.predict.keep.rows(x.subject, na.action = na.action)
+    x.subject <- x.subject[id.unique, , drop = FALSE]
     time.grid <- sort(unique(tm))
     time.by.subject <- lapply(seq_len(nrow(x.subject)), function(i) time.grid)
-    id.unique <- seq_len(nrow(x.subject))
     id.long <- rep(id.unique, each = length(time.grid))
     y.raw <- NULL
   } else if (!tm.supplied || !id.supplied) {
@@ -459,9 +480,10 @@ generic.predict.boostmtree <- function(
       warning("`y` is ignored unless both `tm` and `id` are supplied for the prediction data.")
     }
     x.subject <- boostmtree.predict.validate.x(x, training.names = training.names)
+    id.unique <- boostmtree.predict.keep.rows(x.subject, na.action = na.action)
+    x.subject <- x.subject[id.unique, , drop = FALSE]
     time.grid <- object$time.unique
     time.by.subject <- lapply(seq_len(nrow(x.subject)), function(i) time.grid)
-    id.unique <- seq_len(nrow(x.subject))
     id.long <- rep(id.unique, each = length(time.grid))
     y.raw <- NULL
   } else {

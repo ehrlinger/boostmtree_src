@@ -1,3 +1,20 @@
+# boostmtree 2.0.10
+
+Cleveland Clinic Foundation patched build.
+
+## Bug fixes
+
+* For a model fitted with `na.action = "na.omit"`, `predict(object, x = )`
+  without `tm` and `id`, and `predict(..., partial = TRUE)`, stopped with
+  "subscript out of bounds" when a row of `x` had a missing covariate.
+  randomForestSRC dropped the row, so the terminal nodes no longer lined up
+  with the rows. Those rows are now dropped first, with a warning, and
+  `id.unique` gives the row numbers of `x` that were kept. The `x`, `tm`,
+  `id` path already dropped such subjects. Predictions for complete rows are
+  unchanged.
+* `boostmtree.control(cv.cores = Inf)` passed validation, became `NA`, and
+  failed after the first tree. It is now rejected up front.
+
 # boostmtree 2.0.9
 
 Cleveland Clinic Foundation patched build.

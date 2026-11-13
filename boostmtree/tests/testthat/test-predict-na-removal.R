@@ -72,3 +72,27 @@ test_that("the NA-removal path keeps covariates aligned with tm, id and y", {
   expect_equal(vapply(p$time, length, integer(1)), p$ni)
   expect_true(all(is.finite(unlist(p$mu))))
 })
+
+# With `x` alone (no `tm` and `id`), and with `partial = TRUE`, an NA row used
+# to reach randomForestSRC, which dropped it, so the terminal-node lookup no
+# longer lined up with the rows and predict() stopped with "subscript out of
+# bounds". The row is now dropped first, with a warning, and `id.unique` names
+# the rows of `x` that were kept.
+test_that("an na.omit fit drops NA rows of x given without tm and id", {
+  d <- make.longitudinal()
+  fit <- fit.omit(d)
+  x <- d$features[!duplicated(d$id), , drop = FALSE][1:6, , drop = FALSE]
+  x.na <- x
+  x.na[2L, 1L] <- NA_real_
+  clean <- predict(fit, x = x[-2L, , drop = FALSE])
+  expect_warning(p <- predict(fit, x = x.na), "1 row\\(s\\) of `x`")
+  expect_identical(p$id.unique, c(1L, 3:6))
+  expect_identical(p$muhat, clean$muhat)
+  tm <- sort(unique(d$time))
+  clean <- predict(fit, x = x[-2L, , drop = FALSE], tm = tm, partial = TRUE)
+  expect_warning(p <- predict(fit, x = x.na, tm = tm, partial = TRUE), "1 row\\(s\\) of `x`")
+  expect_identical(p$id.unique, c(1L, 3:6))
+  expect_identical(p$muhat, clean$muhat)
+  x.na[, 1L] <- NA_real_
+  expect_error(predict(fit, x = x.na), "Every row of `x` has a missing covariate")
+})

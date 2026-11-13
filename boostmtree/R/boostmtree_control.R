@@ -96,7 +96,7 @@ boostmtree.normalize.control <- function(control) {
   }
   control$cv.lambda <- isTRUE(control$cv.lambda)
   control$cv.rho <- isTRUE(control$cv.rho)
-  if (length(control$cv.cores) != 1L || is.na(control$cv.cores) || control$cv.cores < 1) {
+  if (length(control$cv.cores) != 1L || is.na(control$cv.cores) || is.infinite(suppressWarnings(as.numeric(control$cv.cores))) || control$cv.cores < 1) {
     stop("`control$cv.cores` must be a single positive integer.")
   }
   control$cv.cores <- as.integer(control$cv.cores)

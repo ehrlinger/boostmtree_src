@@ -29,6 +29,7 @@ test_that("cv.cores > 1 gives the identical cross-validated fit", {
 test_that("cv.cores is validated", {
   expect_error(boostmtree:::boostmtree.normalize.control(boostmtree.control(cv.cores = 0)), "cv.cores")
   expect_error(boostmtree:::boostmtree.normalize.control(boostmtree.control(cv.cores = NA)), "cv.cores")
+  expect_error(boostmtree:::boostmtree.normalize.control(boostmtree.control(cv.cores = Inf)), "cv.cores")
   if (.Platform$OS.type == "windows") {
     expect_warning(
       ctl <- boostmtree:::boostmtree.normalize.control(boostmtree.control(cv.cores = 3)),
