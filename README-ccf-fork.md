@@ -28,6 +28,9 @@ Since then:
   `progress` callback.
 * **2.0.9:** a fitted object holds 60% to 70% less memory per boosting
   iteration.
+* **2.0.10:** for an `na.omit` fit, `predict(x = )` and `partial = TRUE` drop
+  rows of `x` with a missing covariate (with a warning) instead of stopping, and
+  `boostmtree.control(cv.cores = )` rejects values that are not a whole number.
 
 The performance releases leave results unchanged, bit for bit. The package
 itself lives in the [`boostmtree/`](boostmtree) subdirectory of this repository.
@@ -37,11 +40,11 @@ itself lives in the [`boostmtree/`](boostmtree) subdirectory of this repository.
 ```r
 remotes::install_github("ehrlinger/boostmtree_src",
                         subdir = "boostmtree",
-                        ref    = "v2.0.9-ccf")
+                        ref    = "v2.0.10-ccf")
 ```
 
 A `vX.Y.Z-ccf` tag is cut for each release, and this line is updated to match
-the `Version:` in `boostmtree/DESCRIPTION`. If the `v2.0.9-ccf` tag is not yet published, install from the branch instead,
+the `Version:` in `boostmtree/DESCRIPTION`. If the `v2.0.10-ccf` tag is not yet published, install from the branch instead,
 or from a local clone with `remotes::install_local("boostmtree")` run from the
 repository root. Check the
 [tags page](https://github.com/ehrlinger/boostmtree_src/tags) for what is
@@ -96,6 +99,19 @@ terminal nodes once for every out-of-bag subject, so its cost grows with the
 square of the number of subjects. Give it several cores with
 `boostmtree.control(cv.cores = )`; results are identical for any core count.
 Windows cannot fork and uses one core.
+
+`cv.cores` does not cap `randomForestSRC`, which grows each tree on every core
+of the host unless `options(rf.cores = )` or the `RF_CORES` environment variable
+is set. Set it to the same value before the fit:
+
+```r
+options(rf.cores = 4)
+```
+
+On a shared server (1,000 simulated patients, `cv.cores = 4`, M = 30), the fit
+without it peaked at 229 threads; with `rf.cores` set to 4 it peaked at 9 and
+used about 30% less CPU, with identical fitted values. The tree is grown and
+the out-of-bag update runs at different times, so the two settings do not add.
 
 Once cross-validation has chosen the number of boosting steps (`fit$m.opt`), a
 `cv.flag = FALSE` refit at that `M` is faster to work with for `predict()` and
