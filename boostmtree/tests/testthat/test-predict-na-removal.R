@@ -96,3 +96,27 @@ test_that("an na.omit fit drops NA rows of x given without tm and id", {
   x.na[, 1L] <- NA_real_
   expect_error(predict(fit, x = x.na), "Every row of `x` has a missing covariate")
 })
+
+# The cross-validated coefficients are looked up by fitted subject position.
+# One extra row plus one dropped NA row leaves the count equal to the fitted
+# subject count, but the rows are no longer the fitted set in order, so
+# use.cv.flag must fall back to the ordinary coefficients.
+test_that("a dropped NA row turns off use.cv.flag for partial predictions", {
+  d <- make.longitudinal(n = 20, n.time = 3)
+  set.seed(11)
+  fit <- boostmtree(d$features, d$time, d$id, d$y, family = "continuous", M = 5,
+                    cv.flag = TRUE, verbose = FALSE, na.action = "na.omit")
+  tm <- sort(unique(d$time))
+  x <- rbind(fit$x, fit$x[1L, , drop = FALSE])
+  x[2L, 1L] <- NA_real_
+  warnings <- character(0)
+  p <- withCallingHandlers(
+    predict(fit, x = x, tm = tm, partial = TRUE, use.cv.flag = TRUE),
+    warning = function(w) {
+      warnings <<- c(warnings, conditionMessage(w))
+      invokeRestart("muffleWarning")
+    }
+  )
+  expect_true(any(grepl("using the ordinary fitted coefficients", warnings)))
+  expect_identical(p$muhat, suppressWarnings(predict(fit, x = x, tm = tm, partial = TRUE))$muhat)
+})

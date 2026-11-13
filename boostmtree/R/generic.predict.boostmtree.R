@@ -461,6 +461,7 @@ generic.predict.boostmtree <- function(
     stop("`tm` must be supplied when `partial = TRUE`.")
   }
   test.flag <- FALSE
+  rows.dropped <- FALSE
   if (!x.supplied) {
     x.subject <- object$x
     time.by.subject <- object$time
@@ -470,6 +471,7 @@ generic.predict.boostmtree <- function(
   } else if (partial) {
     x.subject <- boostmtree.predict.validate.x(x, training.names = training.names)
     id.unique <- boostmtree.predict.keep.rows(x.subject, na.action = na.action)
+    rows.dropped <- length(id.unique) < nrow(x.subject)
     x.subject <- x.subject[id.unique, , drop = FALSE]
     time.grid <- sort(unique(tm))
     time.by.subject <- lapply(seq_len(nrow(x.subject)), function(i) time.grid)
@@ -521,7 +523,10 @@ generic.predict.boostmtree <- function(
     warning("`use.cv.flag = TRUE` is only used for the original training subjects; using the ordinary fitted coefficients for new prediction data.")
     use.cv.flag <- FALSE
   }
-  if (use.cv.flag && partial && x.supplied && nrow(x.subject) != nrow(object$x)) {
+  # The cross-validated coefficients are looked up by fitted subject position,
+  # so they apply only when `x` is the fitted subject set in order. A dropped
+  # NA row breaks that even when the remaining count happens to match.
+  if (use.cv.flag && partial && x.supplied && (rows.dropped || nrow(x.subject) != nrow(object$x))) {
     warning("`use.cv.flag = TRUE` with `partial = TRUE` requires `x` to contain the full fitted subject set in the original row order; using the ordinary fitted coefficients instead.")
     use.cv.flag <- FALSE
   }

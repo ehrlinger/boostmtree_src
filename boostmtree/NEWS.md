@@ -11,9 +11,14 @@ Cleveland Clinic Foundation patched build.
   with the rows. Those rows are now dropped first, with a warning, and
   `id.unique` gives the row numbers of `x` that were kept. The `x`, `tm`,
   `id` path already dropped such subjects. Predictions for complete rows are
-  unchanged.
-* `boostmtree.control(cv.cores = Inf)` passed validation, became `NA`, and
-  failed after the first tree. It is now rejected up front.
+  unchanged. With `partial = TRUE, use.cv.flag = TRUE`, a dropped row turns
+  the cross-validated coefficients off (with the existing warning), since the
+  rows are no longer the fitted subjects in order.
+* `boostmtree.control(cv.cores = )` values that are not a whole number from 1
+  to `.Machine$integer.max` (`Inf`, `"garbage"`, `2147483648`) passed
+  validation, became `NA`, and failed after the first tree. They are now
+  rejected up front, and so is a fractional value such as `1.5`, which was
+  silently truncated. A numeric string such as `"4"` is still accepted.
 
 # boostmtree 2.0.9
 
