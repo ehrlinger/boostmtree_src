@@ -77,11 +77,13 @@ reference, pin `randomForestSRC` to the reference version
 If it still fails with `randomForestSRC` pinned, report the full output to the
 package maintainer rather than using the build.
 
-**Known failure, November 2026:** under `randomForestSRC` 3.10.0, the current
-CRAN release, the check fails on all five components. It fails the same way for
-every fork release from 2.0.1 to 2.0.9, so the cause is the dependency, not the
-fork. Until the baseline is regenerated, pin 3.6.2 as above to reproduce the
-verified results.
+**Known failure, November 2026:** on a machine with `randomForestSRC` 3.10.0
+(the current CRAN release) and `nlme` 3.1-172, the check fails on all five
+components. The baseline was recorded with `randomForestSRC` 3.6.2 and `nlme`
+3.1-169. Every fork release from 2.0.1 to 2.0.9 fails the same way, so no change
+between fork releases explains the mismatch, but which dependency difference
+causes it has not been isolated. Follow the guidance above: pin
+`randomForestSRC` 3.6.2 and re-run before trusting any numbers.
 
 (`tools/baseline/compare.R` is a different tool: it uses `identical()` and is for
 proving a code change moved nothing *on one machine*. It is not appropriate
