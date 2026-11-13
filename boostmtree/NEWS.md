@@ -1,3 +1,28 @@
+# boostmtree 2.0.9
+
+Cleveland Clinic Foundation patched build.
+
+## Bug fixes
+
+* A fitted object holds about 60% less memory per boosting iteration. Each
+  step stored a full `randomForestSRC` grow object, though prediction only
+  drops new data down the tree's forest and reads its `inbag`. The stored
+  trees now drop the out-of-bag regression output, the membership, and the
+  top-level `xvar` and `yvar` (aliases of the forest's copies that
+  `saveRDS()` writes twice), and every tree shares one copy of the subject
+  covariate frame, `base.learner.xvar`, restored before `predict.rfsrc()`
+  runs. A tree whose covariate frame differs keeps its own, and objects
+  fitted by earlier versions predict as before. Each left-out subject's
+  cross-validated coefficients in `gamma.i.list` are now one matrix, node
+  label first, instead of a two-element list. On a synthetic
+  cross-validated fit (1,000 subjects, 36 covariates, `na.impute`) the memory
+  held per iteration fell from 1.10 MB to 0.43 MB, `object.size()` from 1.82 MB
+  to 0.53 MB, and the saved size from 1.37 MB to 0.37 MB. Results are
+  unchanged, bit for bit: `tools/baseline/slim-learner-equivalence.R`
+  compares the fit, `predict()` with and without new data and
+  `use.cv.flag`, `partial.plot()`, `marginal.plot()` and `vimp()` against
+  2.0.8.
+
 # boostmtree 2.0.8
 
 Cleveland Clinic Foundation patched build.
