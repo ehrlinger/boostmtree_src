@@ -105,6 +105,9 @@ An object of class \code{c("boostmtree", "predict", ...)} with components:
 \describe{
   \item{base.learner}{Stored tree learners from the fitted object.}
 
+  \item{base.learner.xvar}{The covariate frame shared by the stored tree
+  learners.}
+
   \item{boost.obj}{The fitted training object with large internal fitting
   components removed.}
 

@@ -216,8 +216,8 @@ boostmtree.vimp.response.by.q <- function(object, model, family, n.q) {
   })
   lapply(y.by.q.vector, function(z) boostmtree.vimp.split.by.subject(z, id, id.unique))
 }
-boostmtree.vimp.predict.membership <- function(base.learner, newdata, k, na.action = "na.impute") {
-  c(predict.rfsrc(base.learner, newdata = newdata, membership = TRUE, ptn.count = k, importance = "none", na.action = na.action)$ptn.membership)
+boostmtree.vimp.predict.membership <- function(base.learner, newdata, k, na.action = "na.impute", shared.xvar = NULL) {
+  c(predict.rfsrc(boostmtree.restore.learner(base.learner, shared.xvar), newdata = newdata, membership = TRUE, ptn.count = k, importance = "none", na.action = na.action)$ptn.membership)
 }
 boostmtree.vimp.make.reference <- function(l.pred.db.vimp, family, n.q, ni, n, p) {
   l.pred.ref.vimp <- vector("list", p)
@@ -299,6 +299,7 @@ boostmtree.vimp.from.grow <- function(object, x.names = NULL, joint = FALSE) {
   family <- boostmtree.vimp.field(object, "family")
   y.by.q <- boostmtree.vimp.response.by.q(object, object, family = family, n.q = n.q)
   base.learner <- boostmtree.vimp.field(object, "base.learner", legacy = "baselearner")
+  base.learner.xvar <- boostmtree.vimp.field(object, "base.learner.xvar")
   if (is.null(gamma.i.list)) {
     stop("Grow-object variable importance requires `gamma.i.list` from the CV fit path.")
   }
@@ -326,7 +327,7 @@ boostmtree.vimp.from.grow <- function(object, x.names = NULL, joint = FALSE) {
         }
         x.k
       }))
-      membership.noise <- boostmtree.vimp.predict.membership(base.learner = base.learner[[q]][[m]], newdata = x.noise, k = k, na.action = "na.impute")
+      membership.noise <- boostmtree.vimp.predict.membership(base.learner = base.learner[[q]][[m]], newdata = x.noise, k = k, na.action = "na.impute", shared.xvar = base.learner.xvar)
       matrix(membership.noise, nrow = n.oob, byrow = FALSE)
     })
   }
@@ -433,6 +434,7 @@ boostmtree.vimp.from.predict <- function(object, x.names = NULL, joint = FALSE) 
   nu.vec <- boostmtree.vimp.get.nu.vec(object, df.time.design)
   m.opt <- as.integer(boostmtree.vimp.field(object, "m.opt", legacy = "Mopt"))
   base.learner <- boostmtree.vimp.field(object, "base.learner", legacy = "baselearner")
+  base.learner.xvar <- boostmtree.vimp.field(object, "base.learner.xvar")
   gamma <- boostmtree.vimp.field(object, "gamma")
   membership <- boostmtree.vimp.field(object, "membership")
   rmse <- boostmtree.vimp.field(object, "rmse") * y.sd
@@ -452,7 +454,7 @@ boostmtree.vimp.from.predict <- function(object, x.names = NULL, joint = FALSE) 
         }
         x.k
       }))
-      boostmtree.vimp.predict.membership(base.learner = base.learner[[q]][[m]], newdata = x.noise, k = k, na.action = "na.impute")
+      boostmtree.vimp.predict.membership(base.learner = base.learner[[q]][[m]], newdata = x.noise, k = k, na.action = "na.impute", shared.xvar = base.learner.xvar)
     })
   }
   l.pred.db.vimp <- lapply(seq_len(n.q), function(q) vector("list", variable.info$p))

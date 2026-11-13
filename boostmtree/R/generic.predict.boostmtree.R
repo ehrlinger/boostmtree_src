@@ -512,7 +512,7 @@ generic.predict.boostmtree <- function(
     for (m in seq_len(m.max)) {
       if (!use.cv.flag) {
         prediction.object <- predict.rfsrc(
-          object$base.learner[[q]][[m]],
+          boostmtree.restore.learner(object$base.learner[[q]][[m]], object$base.learner.xvar),
           newdata = x.subject,
           membership = TRUE,
           ptn.count = object$k,
@@ -525,7 +525,7 @@ generic.predict.boostmtree <- function(
         oob.list[[q]][[m]] <- oob
         if (length(oob) > 0L) {
           prediction.object <- predict.rfsrc(
-            object$base.learner[[q]][[m]],
+            boostmtree.restore.learner(object$base.learner[[q]][[m]], object$base.learner.xvar),
             newdata = x.subject[oob, , drop = FALSE],
             membership = TRUE,
             ptn.count = object$k,
@@ -611,6 +611,7 @@ generic.predict.boostmtree <- function(
   }
   boost.obj <- object
   boost.obj$base.learner <- NULL
+  boost.obj$base.learner.xvar <- NULL
   boost.obj$membership <- NULL
   boost.obj$gamma <- NULL
   boost.obj$gamma.i.list <- NULL
@@ -645,6 +646,7 @@ generic.predict.boostmtree <- function(
     time.design = time.design,
     df.time.design = ncol(object$x.tm),
     base.learner = object$base.learner,
+    base.learner.xvar = object$base.learner.xvar,
     gamma = if (use.cv.flag) object$gamma.i.list else object$gamma,
     membership = membership,
     mu = boostmtree.predict.flatten.single.response(mu, family = object$family),
