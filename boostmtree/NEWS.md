@@ -4,10 +4,11 @@ Cleveland Clinic Foundation patched build.
 
 ## Bug fixes
 
-* A fitted object holds about 60% less memory per boosting iteration. Each
+* A fitted object holds about 60% to 70% less memory per boosting iteration. Each
   step stored a full `randomForestSRC` grow object, though prediction only
   drops new data down the tree's forest and reads its `inbag`. The stored
-  trees now drop the out-of-bag regression output, the membership, and the
+  trees now drop the out-of-bag regression output, the membership, the
+  imputed rows that `na.impute` adds when covariates are missing, and the
   top-level `xvar` and `yvar` (aliases of the forest's copies that
   `saveRDS()` writes twice), and every tree shares one copy of the subject
   covariate frame, `base.learner.xvar`, restored before `predict.rfsrc()`
@@ -23,7 +24,10 @@ Cleveland Clinic Foundation patched build.
   under any `options(scipen)`. On a synthetic
   cross-validated fit (1,000 subjects, 36 covariates, `na.impute`) the memory
   held per iteration fell from 1.10 MB to 0.43 MB, `object.size()` from 1.82 MB
-  to 0.53 MB, and the saved size from 1.37 MB to 0.37 MB. Results are
+  to 0.53 MB, and the saved size from 1.37 MB to 0.37 MB. With 10 of the
+  covariates missing for 30% of subjects, the memory held per iteration fell
+  from 1.52 MB to 0.43 MB, `object.size()` from 2.24 MB to 0.53 MB, and the
+  saved size from 1.77 MB to 0.37 MB. Results are
   unchanged, bit for bit: `tools/baseline/slim-learner-equivalence.R`
   compares the fit, `predict()` with and without new data and
   `use.cv.flag`, `partial.plot()`, `marginal.plot()` and `vimp()` against

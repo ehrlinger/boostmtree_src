@@ -221,9 +221,12 @@ boostmtree.fit.gamma.cluster <- function(subject.index, l.pred.current, y.curren
 # data down a stored tree: predict.rfsrc(newdata = ...) reads the tree's
 # class, family, variable names and its `forest`, and boostmtree reads `inbag`.
 # The rest of the grow object is dead weight that every step used to keep:
-# the out-of-bag regression output and membership, and top-level `xvar` and
-# `yvar`, which alias the forest's copies in memory but are written out twice
-# by saveRDS() and counted twice by object.size().
+# the out-of-bag regression output and membership; under na.impute with
+# missing covariates, the imputed rows (`imputed.data`, `imputed.indv`), which
+# grow with the number of incomplete subjects times the covariate and
+# response columns; and top-level `xvar` and `yvar`, which alias the forest's
+# copies in memory but are written out twice by saveRDS() and counted twice
+# by object.size().
 #
 # The forest's own `xvar` is needed to restore the tree, but it is the same
 # subject covariate frame at every step, held once per step. Each stored tree
@@ -236,7 +239,7 @@ boostmtree.fit.gamma.cluster <- function(subject.index, l.pred.current, y.curren
 # frame and crash R. Its class therefore leads with "boostmtree.learner", which
 # randomForestSRC's own class check rejects before any native call, and
 # predict() on it stops with an R error. Restoring drops that class again.
-boostmtree.learner.dead.fields <- c("xvar", "yvar", "regrOutput", "membership")
+boostmtree.learner.dead.fields <- c("xvar", "yvar", "regrOutput", "membership", "imputed.data", "imputed.indv")
 boostmtree.slim.learner <- function(learner, shared.xvar) {
   slim <- unclass(learner)
   slim[intersect(boostmtree.learner.dead.fields, names(slim))] <- NULL

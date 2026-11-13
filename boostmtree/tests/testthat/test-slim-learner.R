@@ -38,11 +38,14 @@ unslim <- function(fit) {
 }
 
 test_that("stored trees drop the dead fields and share one covariate frame", {
+  # slim.fit() uses na.impute with two incomplete subjects, so rfsrc returns
+  # imputed rows that the stored trees must not keep.
   fit <- slim.fit()$fit
   expect_s3_class(fit$base.learner.xvar, "data.frame")
+  expect_true(anyNA(fit$base.learner.xvar))
   for (learner in fit$base.learner[[1]]) {
     expect_s3_class(learner, "rfsrc")
-    expect_false(any(c("xvar", "yvar", "regrOutput", "membership") %in% names(learner)))
+    expect_false(any(c("xvar", "yvar", "regrOutput", "membership", "imputed.data", "imputed.indv") %in% names(learner)))
     expect_true("xvar" %in% names(learner$forest))
     expect_null(learner$forest$xvar)
     expect_false(is.null(learner$forest$yvar))
