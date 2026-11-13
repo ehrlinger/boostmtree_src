@@ -2,8 +2,11 @@
 
 ## What this is
 
-This is a fork of [`kogalur/boostmtree`](https://github.com/kogalur/boostmtree)
-carrying one correctness fix. In upstream `boostmtree`, fitting with
+This is a fork of [`kogalur/boostmtree`](https://github.com/kogalur/boostmtree).
+It began as one correctness fix and now also carries bug fixes and performance
+work. [`boostmtree/NEWS.md`](boostmtree/NEWS.md) lists every change by release.
+
+The correctness fix (2.0.1): in upstream `boostmtree`, fitting with
 `cv.flag = TRUE` skipped the in-sample `l.pred`/`mu` refresh inside the boosting
 loop. The in-sample residuals therefore never shrank: `phi` inflated, the ridge
 penalty `lambda` collapsed by roughly three orders of magnitude, and every
@@ -11,7 +14,22 @@ boosting step contributed a same-sized terminal-node coefficient, so the linear
 predictor accumulated `M` unshrunk increments and diverged linearly in `M`.
 Anything that reads the non-cross-validated path (`predict(..., use.cv.flag =
 FALSE)`, `partial.plot()`, `vimp()`) was affected. The `cv.flag = FALSE` path
-was never wrong and is bit-identical before and after the fix. The package
+was never wrong and is bit-identical before and after the fix.
+
+Since then:
+
+* **2.0.2:** `na.action = "na.omit"` is accepted, and `vimp(joint = TRUE)` no
+  longer fails.
+* **2.0.4 to 2.0.7:** cross-validated fits can run the out-of-bag update on
+  several cores (`boostmtree.control(cv.cores = )`), each core holds far less
+  memory, and each forked worker runs its BLAS on one thread.
+* **2.0.8:** `predict(partial = TRUE)` and `partial.plot()` no longer run out of
+  memory on long time grids, and `boostmtree()` and `partial.plot()` take a
+  `progress` callback.
+* **2.0.9:** a fitted object holds 60% to 70% less memory per boosting
+  iteration.
+
+The performance releases leave results unchanged, bit for bit. The package
 itself lives in the [`boostmtree/`](boostmtree) subdirectory of this repository.
 
 ## Install
@@ -19,11 +37,11 @@ itself lives in the [`boostmtree/`](boostmtree) subdirectory of this repository.
 ```r
 remotes::install_github("ehrlinger/boostmtree_src",
                         subdir = "boostmtree",
-                        ref    = "v2.0.7-ccf")
+                        ref    = "v2.0.9-ccf")
 ```
 
 A `vX.Y.Z-ccf` tag is cut for each release, and this line is updated to match
-the `Version:` in `boostmtree/DESCRIPTION`. If the `v2.0.7-ccf` tag is not yet published, install from the branch instead,
+the `Version:` in `boostmtree/DESCRIPTION`. If the `v2.0.9-ccf` tag is not yet published, install from the branch instead,
 or from a local clone with `remotes::install_local("boostmtree")` run from the
 repository root. Check the
 [tags page](https://github.com/ehrlinger/boostmtree_src/tags) for what is
@@ -59,24 +77,37 @@ reference, pin `randomForestSRC` to the reference version
 If it still fails with `randomForestSRC` pinned, report the full output to the
 package maintainer rather than using the build.
 
+**Known failure, November 2026:** on a machine with `randomForestSRC` 3.10.0
+(the current CRAN release) and `nlme` 3.1-172, the check fails on all five
+components. The baseline was recorded with `randomForestSRC` 3.6.2 and `nlme`
+3.1-169. Every fork release from 2.0.1 to 2.0.9 fails the same way, so no change
+between fork releases explains the mismatch, but which dependency difference
+causes it has not been isolated. Follow the guidance above: pin
+`randomForestSRC` 3.6.2 and re-run before trusting any numbers.
+
 (`tools/baseline/compare.R` is a different tool: it uses `identical()` and is for
 proving a code change moved nothing *on one machine*. It is not appropriate
 across machines.)
 
-## Performance: use `cv.flag = TRUE` once, then turn it off
+## Performance: cross-validated fits
 
-`cv.flag = TRUE` is about **5x slower** than `cv.flag = FALSE`, measured at
-10.1 s versus 1.9 s for `M = 50`, `n = 150`. Recommended workflow:
+`cv.flag = TRUE` is the expensive part of a fit. Each boosting step refits the
+terminal nodes once for every out-of-bag subject, so its cost grows with the
+square of the number of subjects. Give it several cores with
+`boostmtree.control(cv.cores = )`; results are identical for any core count.
+Windows cannot fork and uses one core.
 
-1. Fit once with `cv.flag = TRUE` to select the optimal number of boosting
-   steps `M` (`fit$m.opt`).
-2. Refit with `cv.flag = FALSE` at that `M`, and use *that* fit for all
-   downstream `predict()`, `partial.plot()` and `vimp()` work.
+Once cross-validation has chosen the number of boosting steps (`fit$m.opt`), a
+`cv.flag = FALSE` refit at that `M` is faster to work with for `predict()` and
+`partial.plot()`. Keep the `cv.flag = TRUE` fit for `vimp()` of a fitted object,
+which needs its out-of-bag coefficients and stops on a `cv.flag = FALSE` fit.
 
 ```r
-cvfit <- boostmtree(x, tm, id, y, family = "continuous", M = 500, cv.flag = TRUE)
+cvfit <- boostmtree(x, tm, id, y, family = "continuous", M = 500, cv.flag = TRUE,
+                    control = boostmtree.control(cv.cores = 4))
 fit   <- boostmtree(x, tm, id, y, family = "continuous", M = cvfit$m.opt,
                     cv.flag = FALSE)
+imp   <- vimp.boostmtree(cvfit)
 ```
 
 ## Warning: re-derive results from any pre-fix `cv.flag = TRUE` fit
