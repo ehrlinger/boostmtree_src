@@ -76,6 +76,7 @@ boostmtree.build.object <- function(model.info, fit.info) {
     rho = boostmtree.flatten.single.path(fit.info$rho, family = model.info$family),
     gamma = fit.info$gamma,
     base.learner = fit.info$base.learner,
+    base.learner.xvar = fit.info$base.learner.xvar,
     membership = fit.info$membership,
     x.tm = model.info$x.tm,
     time.design = model.info$time.design,

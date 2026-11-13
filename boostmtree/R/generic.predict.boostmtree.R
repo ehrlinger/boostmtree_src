@@ -145,12 +145,20 @@ boostmtree.predict.normalize.gamma.step <- function(gamma.step) {
   }
   stop("Unsupported terminal-node coefficient format in `gamma`.")
 }
+# Terminal-node labels are whole numbers, stored as integers or (in compacted
+# cross-validated steps) doubles. Numeric labels are matched by value: as
+# strings a double can print as "1e+05" or "100000" depending on
+# options(scipen), and the match would then depend on the session.
+boostmtree.match.node.label <- function(label, node.label) {
+  if (is.numeric(label) && is.numeric(node.label)) {
+    match(as.numeric(label), as.numeric(node.label))
+  } else {
+    match(as.character(label), as.character(node.label))
+  }
+}
 boostmtree.predict.match.gamma <- function(gamma.step, membership.label) {
   gamma.step <- boostmtree.predict.normalize.gamma.step(gamma.step)
-  row.index <- match(
-    as.character(membership.label),
-    as.character(gamma.step$node.label)
-  )
+  row.index <- boostmtree.match.node.label(membership.label, gamma.step$node.label)
   if (anyNA(row.index)) {
     stop("Unable to match predicted node memberships to stored terminal-node coefficients.")
   }
@@ -512,7 +520,7 @@ generic.predict.boostmtree <- function(
     for (m in seq_len(m.max)) {
       if (!use.cv.flag) {
         prediction.object <- predict.rfsrc(
-          object$base.learner[[q]][[m]],
+          boostmtree.restore.learner(object$base.learner[[q]][[m]], object$base.learner.xvar),
           newdata = x.subject,
           membership = TRUE,
           ptn.count = object$k,
@@ -525,7 +533,7 @@ generic.predict.boostmtree <- function(
         oob.list[[q]][[m]] <- oob
         if (length(oob) > 0L) {
           prediction.object <- predict.rfsrc(
-            object$base.learner[[q]][[m]],
+            boostmtree.restore.learner(object$base.learner[[q]][[m]], object$base.learner.xvar),
             newdata = x.subject[oob, , drop = FALSE],
             membership = TRUE,
             ptn.count = object$k,
@@ -611,6 +619,7 @@ generic.predict.boostmtree <- function(
   }
   boost.obj <- object
   boost.obj$base.learner <- NULL
+  boost.obj$base.learner.xvar <- NULL
   boost.obj$membership <- NULL
   boost.obj$gamma <- NULL
   boost.obj$gamma.i.list <- NULL
@@ -645,6 +654,7 @@ generic.predict.boostmtree <- function(
     time.design = time.design,
     df.time.design = ncol(object$x.tm),
     base.learner = object$base.learner,
+    base.learner.xvar = object$base.learner.xvar,
     gamma = if (use.cv.flag) object$gamma.i.list else object$gamma,
     membership = membership,
     mu = boostmtree.predict.flatten.single.response(mu, family = object$family),

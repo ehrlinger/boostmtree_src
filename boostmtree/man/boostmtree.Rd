@@ -268,6 +268,17 @@ An object of class \code{c("boostmtree", "grow", ...)} with components:
 \describe{
   \item{base.learner}{
     Fitted tree base learners, indexed by boosted subproblem and boosting iteration.
+    Each is a \code{randomForestSRC} grow object holding only what prediction
+    reads: its out-of-bag output, membership, imputed rows and top-level data
+    copies are dropped, and its forest's covariate frame is held once in
+    \code{base.learner.xvar}. Each tree has class \code{boostmtree.learner}
+    ahead of its \code{randomForestSRC} classes, so it is not mistaken for a
+    complete forest: \code{predict()} on it stops with an error.
+  }
+
+  \item{base.learner.xvar}{
+    The subject covariate frame shared by every stored tree in
+    \code{base.learner}, restored into each tree before it predicts.
   }
 
   \item{control}{
@@ -298,7 +309,8 @@ An object of class \code{c("boostmtree", "grow", ...)} with components:
 
   \item{gamma.i.list}{
     Cross-validated terminal-node coefficient summaries when
-    \code{cv.flag = TRUE}; otherwise \code{NULL}.
+    \code{cv.flag = TRUE}; otherwise \code{NULL}. Each left-out subject's
+    coefficients at a step are one matrix whose first column is the node label.
   }
 
   \item{id}{

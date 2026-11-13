@@ -216,6 +216,73 @@ boostmtree.fit.gamma.cluster <- function(subject.index, l.pred.current, y.curren
   }
   gamma.update
 }
+# A boostmtree fit keeps one rfsrc tree per boosting step and response. Later
+# calls (predict(), partial.plot(), marginal.plot(), vimp()) only ever drop new
+# data down a stored tree: predict.rfsrc(newdata = ...) reads the tree's
+# class, family, variable names and its `forest`, and boostmtree reads `inbag`.
+# The rest of the grow object is dead weight that every step used to keep:
+# the out-of-bag regression output and membership; under na.impute with
+# missing covariates, the imputed rows (`imputed.data`, `imputed.indv`), which
+# grow with the number of incomplete subjects times the covariate and
+# response columns; and top-level `xvar` and `yvar`, which alias the forest's
+# copies in memory but are written out twice by saveRDS() and counted twice
+# by object.size().
+#
+# The forest's own `xvar` is needed to restore the tree, but it is the same
+# subject covariate frame at every step, held once per step. Each stored tree
+# drops it when it is identical to the fit's one shared copy, and
+# boostmtree.restore.learner() puts it back before predict.rfsrc() runs. A
+# tree whose `xvar` is not identical keeps its own, so restoring is exact.
+#
+# A slimmed tree is no longer a complete rfsrc object: given to
+# randomForestSRC directly, its native code would read the missing covariate
+# frame and crash R. Its class therefore leads with "boostmtree.learner", which
+# randomForestSRC's own class check rejects before any native call, and
+# predict() on it stops with an R error. Restoring drops that class again.
+boostmtree.learner.dead.fields <- c("xvar", "yvar", "regrOutput", "membership", "imputed.data", "imputed.indv")
+boostmtree.slim.learner <- function(learner, shared.xvar) {
+  slim <- unclass(learner)
+  slim[intersect(boostmtree.learner.dead.fields, names(slim))] <- NULL
+  if (!is.null(shared.xvar) && identical(slim$forest$xvar, shared.xvar)) {
+    forest <- slim$forest
+    forest["xvar"] <- list(NULL)
+    slim$forest <- forest
+  }
+  class(slim) <- c("boostmtree.learner", class(learner))
+  slim
+}
+# Put the shared covariate frame back into a slimmed tree. Trees that kept their
+# own `xvar`, and trees from fits made before 2.0.9, are returned unchanged.
+boostmtree.restore.learner <- function(learner, shared.xvar) {
+  if (is.null(learner$forest$xvar) && !is.null(shared.xvar)) {
+    learner$forest$xvar <- shared.xvar
+  }
+  if (inherits(learner, "boostmtree.learner") && !is.null(learner$forest$xvar)) {
+    class(learner) <- setdiff(class(learner), "boostmtree.learner")
+  }
+  learner
+}
+predict.boostmtree.learner <- function(object, ...) {
+  stop(
+    "This tree was stored by boostmtree without its training covariates, to save memory. ",
+    "Predict with the boostmtree fit instead, or restore the tree first: ",
+    "boostmtree:::boostmtree.restore.learner(tree, fit$base.learner.xvar)."
+  )
+}
+# The cross-validated coefficients of one left-out subject at one step: a node
+# label column bound to the node coefficient matrix. One matrix holds what the
+# two-element list held in about two thirds of the memory, and both readers
+# (boostmtree.predict.normalize.gamma.step(), boostmtree.vimp.parse.gamma.step())
+# already accept it. Both match numeric labels by value
+# (boostmtree.match.node.label()), so the double labels match whatever
+# options(scipen) is in force. Labels that are not whole numbers keep the list.
+boostmtree.compact.gamma.step <- function(gamma.step) {
+  label <- gamma.step$node.label
+  if (!is.numeric(label) || anyNA(label) || any(label != round(label)) || any(abs(label) >= 2^53)) {
+    return(gamma.step)
+  }
+  cbind(as.numeric(label), gamma.step$coefficients, deparse.level = 0L)
+}
 boostmtree.make.gamma.step <- function(gamma.coefficients, membership.original) {
   list(
     node.label = sort(unique(membership.original)),
@@ -412,7 +479,7 @@ boostmtree.update.cv.step <- function(cv.state.q, subject.rows, rfsrc.obj, membe
       )
     }
     for (k in seq_along(oob)) {
-      gamma.at.m[[oob[k]]] <- oob.update[[k]]$gamma.step
+      gamma.at.m[[oob[k]]] <- boostmtree.compact.gamma.step(oob.update[[k]]$gamma.step)
       updated[[oob[k]]] <- oob.update[[k]]$l.pred
     }
   }
@@ -587,6 +654,7 @@ boostmtree.fit.tree <- function(model.info) {
     })
   })
   base.learner <- lapply(seq_len(model.info$n.q), function(q) vector("list", model.info$M))
+  base.learner.xvar <- NULL
   membership.list <- lapply(seq_len(model.info$n.q), function(q) vector("list", model.info$M))
   gamma.list <- lapply(seq_len(model.info$n.q), function(q) vector("list", model.info$M))
   oob.subject.count <- matrix(0L, nrow = model.info$M, ncol = model.info$n.q)
@@ -688,7 +756,10 @@ boostmtree.fit.tree <- function(model.info) {
         nimpute = 1,
         seed = model.info$control$seed
       )
-      base.learner[[q]][[m]] <- rfsrc.object
+      if (is.null(base.learner.xvar)) {
+        base.learner.xvar <- rfsrc.object$forest$xvar
+      }
+      base.learner[[q]][[m]] <- boostmtree.slim.learner(rfsrc.object, base.learner.xvar)
       oob.subject.count[m, q] <- sum(rfsrc.object$inbag == 0L)
       prediction.object <- predict.rfsrc(
         rfsrc.object,
@@ -891,6 +962,7 @@ boostmtree.fit.tree <- function(model.info) {
     phi = phi.matrix,
     rho = rho.matrix,
     base.learner = base.learner,
+    base.learner.xvar = base.learner.xvar,
     membership = membership.list,
     gamma = gamma.list,
     err.rate = final.fit$err.rate,
