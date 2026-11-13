@@ -148,6 +148,9 @@ test_that("a stored tree cannot reach randomForestSRC's native predict", {
   path <- tempfile(fileext = ".rds")
   on.exit(unlink(path), add = TRUE)
   saveRDS(tree, path)
+  # Forward slashes: a Windows path's backslashes would be escapes inside the
+  # R string literal below, and the child process would fail to parse it.
+  path <- normalizePath(path, winslash = "/")
   code <- sprintf(paste(
     "suppressMessages(library(randomForestSRC))",
     "tree <- readRDS('%s')",
