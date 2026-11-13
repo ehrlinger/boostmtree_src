@@ -132,8 +132,56 @@ test_that("compacting a coefficient step keeps the values and label matching", {
       boostmtree:::boostmtree.vimp.extract.coefficients(step, label)
     )
   }
-  # 100000 prints as "1e+05" once it is a double, so it could no longer be
-  # matched as a string: such a step stays a list.
-  wide <- list(node.label = c(1L, 100000L), coefficients = matrix(1:4 / 10, 2))
-  expect_identical(boostmtree:::boostmtree.compact.gamma.step(wide), wide)
+})
+
+test_that("a stored tree cannot reach randomForestSRC's native predict", {
+  fit <- slim.fit(cv.flag = FALSE)$fit
+  tree <- fit$base.learner[[1]][[1]]
+  expect_identical(class(tree)[1], "boostmtree.learner")
+  expect_error(predict(tree), "stored by boostmtree without its training covariates")
+  restored <- boostmtree:::boostmtree.restore.learner(tree, fit$base.learner.xvar)
+  expect_false(inherits(restored, "boostmtree.learner"))
+  expect_false(is.null(restored$forest$xvar))
+  # Without boostmtree loaded, predict() dispatches straight to
+  # randomForestSRC. Before 2.0.9's class guard this was a segmentation fault,
+  # which would take the test runner down, so it runs in a separate R process.
+  path <- tempfile(fileext = ".rds")
+  on.exit(unlink(path), add = TRUE)
+  saveRDS(tree, path)
+  code <- sprintf(paste(
+    "suppressMessages(library(randomForestSRC))",
+    "tree <- readRDS('%s')",
+    "r <- tryCatch(predict(tree), error = function(e) 'error')",
+    "cat(if (identical(r, 'error')) 'ERROR' else 'PREDICTED')",
+    sep = "; "
+  ), path)
+  out <- suppressWarnings(system2(
+    file.path(R.home("bin"), "Rscript"), c("--vanilla", "-e", shQuote(code)),
+    stdout = TRUE, stderr = FALSE
+  ))
+  expect_null(attr(out, "status"))
+  expect_identical(tail(out, 1), "ERROR")
+})
+
+test_that("compacted node labels match the same way under any scipen", {
+  step <- list(node.label = c(1L, 7L, 100000L), coefficients = matrix(1:6 / 10, 3))
+  saved <- options(scipen = 999)
+  on.exit(options(saved), add = TRUE)
+  compact <- boostmtree:::boostmtree.compact.gamma.step(step)
+  expect_true(is.matrix(compact))
+  for (scipen in c(0, 999, -5)) {
+    options(scipen = scipen)
+    for (label in c(1L, 7L, 100000L)) {
+      expect_identical(
+        boostmtree:::boostmtree.predict.match.gamma(compact, label),
+        boostmtree:::boostmtree.predict.match.gamma(step, label)
+      )
+      expect_identical(
+        boostmtree:::boostmtree.vimp.extract.coefficients(compact, label),
+        boostmtree:::boostmtree.vimp.extract.coefficients(step, label)
+      )
+    }
+  }
+  fractional <- list(node.label = c(1.5, 2), coefficients = matrix(1:4 / 10, 2))
+  expect_identical(boostmtree:::boostmtree.compact.gamma.step(fractional), fractional)
 })

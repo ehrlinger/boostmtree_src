@@ -115,7 +115,7 @@ boostmtree.vimp.parse.gamma.step <- function(gamma.step) {
 }
 boostmtree.vimp.extract.coefficients <- function(gamma.step, node.label) {
   parsed.gamma <- boostmtree.vimp.parse.gamma.step(gamma.step)
-  row.index <- match(as.character(node.label), as.character(parsed.gamma$node.label))
+  row.index <- boostmtree.match.node.label(node.label, parsed.gamma$node.label)
   if (is.na(row.index)) {
     stop("Unable to match a node label in the gamma step.")
   }

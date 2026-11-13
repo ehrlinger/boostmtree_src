@@ -145,12 +145,20 @@ boostmtree.predict.normalize.gamma.step <- function(gamma.step) {
   }
   stop("Unsupported terminal-node coefficient format in `gamma`.")
 }
+# Terminal-node labels are whole numbers, stored as integers or (in compacted
+# cross-validated steps) doubles. Numeric labels are matched by value: as
+# strings a double can print as "1e+05" or "100000" depending on
+# options(scipen), and the match would then depend on the session.
+boostmtree.match.node.label <- function(label, node.label) {
+  if (is.numeric(label) && is.numeric(node.label)) {
+    match(as.numeric(label), as.numeric(node.label))
+  } else {
+    match(as.character(label), as.character(node.label))
+  }
+}
 boostmtree.predict.match.gamma <- function(gamma.step, membership.label) {
   gamma.step <- boostmtree.predict.normalize.gamma.step(gamma.step)
-  row.index <- match(
-    as.character(membership.label),
-    as.character(gamma.step$node.label)
-  )
+  row.index <- boostmtree.match.node.label(membership.label, gamma.step$node.label)
   if (anyNA(row.index)) {
     stop("Unable to match predicted node memberships to stored terminal-node coefficients.")
   }

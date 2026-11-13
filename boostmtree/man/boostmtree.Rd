@@ -271,7 +271,9 @@ An object of class \code{c("boostmtree", "grow", ...)} with components:
     Each is a \code{randomForestSRC} grow object holding only what prediction
     reads: its out-of-bag output, membership and top-level data copies are
     dropped, and its forest's covariate frame is held once in
-    \code{base.learner.xvar}.
+    \code{base.learner.xvar}. Each tree has class \code{boostmtree.learner}
+    ahead of its \code{randomForestSRC} classes, so it is not mistaken for a
+    complete forest: \code{predict()} on it stops with an error.
   }
 
   \item{base.learner.xvar}{

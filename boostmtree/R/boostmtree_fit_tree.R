@@ -230,6 +230,12 @@ boostmtree.fit.gamma.cluster <- function(subject.index, l.pred.current, y.curren
 # drops it when it is identical to the fit's one shared copy, and
 # boostmtree.restore.learner() puts it back before predict.rfsrc() runs. A
 # tree whose `xvar` is not identical keeps its own, so restoring is exact.
+#
+# A slimmed tree is no longer a complete rfsrc object: given to
+# randomForestSRC directly, its native code would read the missing covariate
+# frame and crash R. Its class therefore leads with "boostmtree.learner", which
+# randomForestSRC's own class check rejects before any native call, and
+# predict() on it stops with an R error. Restoring drops that class again.
 boostmtree.learner.dead.fields <- c("xvar", "yvar", "regrOutput", "membership")
 boostmtree.slim.learner <- function(learner, shared.xvar) {
   slim <- unclass(learner)
@@ -239,7 +245,7 @@ boostmtree.slim.learner <- function(learner, shared.xvar) {
     forest["xvar"] <- list(NULL)
     slim$forest <- forest
   }
-  class(slim) <- class(learner)
+  class(slim) <- c("boostmtree.learner", class(learner))
   slim
 }
 # Put the shared covariate frame back into a slimmed tree. Trees that kept their
@@ -248,17 +254,28 @@ boostmtree.restore.learner <- function(learner, shared.xvar) {
   if (is.null(learner$forest$xvar) && !is.null(shared.xvar)) {
     learner$forest$xvar <- shared.xvar
   }
+  if (inherits(learner, "boostmtree.learner") && !is.null(learner$forest$xvar)) {
+    class(learner) <- setdiff(class(learner), "boostmtree.learner")
+  }
   learner
+}
+predict.boostmtree.learner <- function(object, ...) {
+  stop(
+    "This tree was stored by boostmtree without its training covariates, to save memory. ",
+    "Predict with the boostmtree fit instead, or restore the tree first: ",
+    "boostmtree:::boostmtree.restore.learner(tree, fit$base.learner.xvar)."
+  )
 }
 # The cross-validated coefficients of one left-out subject at one step: a node
 # label column bound to the node coefficient matrix. One matrix holds what the
 # two-element list held in about two thirds of the memory, and both readers
 # (boostmtree.predict.normalize.gamma.step(), boostmtree.vimp.parse.gamma.step())
-# already accept it. The labels are matched as character strings, so the list
-# is kept whenever a label would print differently once stored as a double.
+# already accept it. Both match numeric labels by value
+# (boostmtree.match.node.label()), so the double labels match whatever
+# options(scipen) is in force. Labels that are not whole numbers keep the list.
 boostmtree.compact.gamma.step <- function(gamma.step) {
   label <- gamma.step$node.label
-  if (!is.numeric(label) || !identical(as.character(as.numeric(label)), as.character(label))) {
+  if (!is.numeric(label) || anyNA(label) || any(label != round(label)) || any(abs(label) >= 2^53)) {
     return(gamma.step)
   }
   cbind(as.numeric(label), gamma.step$coefficients, deparse.level = 0L)

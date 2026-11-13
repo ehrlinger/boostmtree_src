@@ -12,9 +12,15 @@ Cleveland Clinic Foundation patched build.
   `saveRDS()` writes twice), and every tree shares one copy of the subject
   covariate frame, `base.learner.xvar`, restored before `predict.rfsrc()`
   runs. A tree whose covariate frame differs keeps its own, and objects
-  fitted by earlier versions predict as before. Each left-out subject's
-  cross-validated coefficients in `gamma.i.list` are now one matrix, node
-  label first, instead of a two-element list. On a synthetic
+  fitted by earlier versions predict as before. A stored tree is therefore
+  not a complete `rfsrc` object, so its class now leads with
+  `boostmtree.learner`: `predict()` on it stops with an R error instead of
+  letting `randomForestSRC`'s native code read the missing covariates and
+  crash R. Each left-out subject's cross-validated coefficients in
+  `gamma.i.list` are now one matrix, node label first, instead of a
+  two-element list. Numeric node labels are matched by value rather than as
+  strings, so a fit saved in one session matches its labels the same way
+  under any `options(scipen)`. On a synthetic
   cross-validated fit (1,000 subjects, 36 covariates, `na.impute`) the memory
   held per iteration fell from 1.10 MB to 0.43 MB, `object.size()` from 1.82 MB
   to 0.53 MB, and the saved size from 1.37 MB to 0.37 MB. Results are

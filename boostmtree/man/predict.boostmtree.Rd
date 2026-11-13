@@ -1,5 +1,6 @@
 \name{predict.boostmtree}
 \alias{predict.boostmtree}
+\alias{predict.boostmtree.learner}
 \title{Predict longitudinal trajectories from a fitted boostmtree model}
 \description{
 Generate fitted or predicted trajectories from a \code{boostmtree} fit.
@@ -20,10 +21,15 @@ common time grid.
   partial = FALSE,
   ...
 )
+
+\method{predict}{boostmtree.learner}(object, ...)
 }
 \arguments{
 
-  \item{object}{A fitted object returned by \code{\link{boostmtree}}.}
+  \item{object}{A fitted object returned by \code{\link{boostmtree}}. For the
+  \code{boostmtree.learner} method, one stored tree from its
+  \code{base.learner}: such a tree is stored without its training covariates,
+  so predicting from it directly stops with an error. Predict with the fit.}
 
   \item{x}{New covariate values. Supply either one row per subject or a
     long-format data frame with one row per observation. If omitted, the
