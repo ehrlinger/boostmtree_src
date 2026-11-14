@@ -360,6 +360,11 @@ partial.plot.boostmtree <- function(
     warning("`use.cv.flag = TRUE` is only supported when all fitted subjects are used; using the ordinary fitted coefficients instead.")
     use.cv.flag <- FALSE
   }
+  # Predictions are made at the distinct chosen observed times only; two chosen
+  # time points can resolve to the same observed time, so each output column
+  # is mapped back to its distinct time.
+  predict.index <- sort(unique(time.info$index))
+  predict.column <- match(time.info$index, predict.index)
   progress <- boostmtree.progress.caller(progress)
   # Every grid is resolved first, so the total number of predictions is known
   # from the first progress call.
@@ -391,11 +396,14 @@ partial.plot.boostmtree <- function(
       new.x <- work.x
       new.x[[nm]] <- boostmtree.effect.assign.column(new.x[[nm]], x.info$values[[k]])
       # One prediction carries every response component. Only `mu` is read, so
-      # the extrapolated `muhat` curves are skipped.
+      # the extrapolated `muhat` curves are skipped. It is made at the chosen
+      # time points only: each time point's value is computed on its own, so
+      # predicting on every observed time (thousands, for echo data) only to
+      # keep a few columns gave the same curves at many times the cost.
       pred.object <- generic.predict.boostmtree(
         object,
         x = new.x,
-        tm = time.info$observed.time,
+        tm = time.info$observed.time[predict.index],
         M = M,
         partial = TRUE,
         use.cv.flag = use.cv.flag,
@@ -412,7 +420,7 @@ partial.plot.boostmtree <- function(
         curve.matrix[[q.out]][k, ] <- colMeans(
           do.call(
             rbind,
-            lapply(pred.response, function(subject.curve) subject.curve[time.info$index])
+            lapply(pred.response, function(subject.curve) subject.curve[predict.column])
           ),
           na.rm = TRUE
         )
