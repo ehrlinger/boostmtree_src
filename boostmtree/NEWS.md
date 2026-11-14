@@ -6,7 +6,7 @@ Cleveland Clinic Foundation patched build.
 
 * `partial.plot()` predicts at the chosen time points only. It predicted
   every subject at every distinct observed time and then kept the few columns
-  it plots; with irregular measurement times (echo data has thousands of
+  it plots; with irregular measurement times (echo data can have thousands of
   distinct times) nearly all of that work was discarded. Each time point's
   value is computed on its own, so the curves are bit-identical to 2.0.10,
   including when two chosen time points resolve to the same observed time.
