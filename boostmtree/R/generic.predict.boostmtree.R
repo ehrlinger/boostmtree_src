@@ -266,23 +266,25 @@ boostmtree.predict.accumulate <- function(
           }
         })
       } else {
-        l.pred.db[[q]] <- lapply(seq_len(n), function(i) {
-          updated <- previous[[i]]
-          if (i %in% oob.list[[q]][[m]]) {
-            gamma.step <- gamma[[q]][[m]][[i]]
-            membership.index <- match(i, oob.list[[q]][[m]])
-            gamma.i <- boostmtree.predict.match.gamma(
-              gamma.step = gamma.step,
-              membership.label = membership[[q]][[m]][membership.index]
-            )
-            updated <- updated + c(time.design[[i]] %*% c(gamma.i[1, ] * nu.vec))
-          }
-          if (ordinal && q > 1L) {
-            pmax(updated, l.pred.db[[q - 1L]][[i]])
-          } else {
-            updated
-          }
-        })
+        # Only the step's out-of-bag subjects move; the rest keep their
+        # previous value. Walking the out-of-bag list directly replaces an
+        # `i %in% oob` and a `match(i, oob)` per subject, which made each step
+        # quadratic in n (most of a partial prediction's time at n = 6250).
+        oob <- oob.list[[q]][[m]]
+        updated <- previous
+        for (k in seq_along(oob)) {
+          i <- oob[k]
+          gamma.i <- boostmtree.predict.match.gamma(
+            gamma.step = gamma[[q]][[m]][[i]],
+            membership.label = membership[[q]][[m]][k]
+          )
+          updated[[i]] <- previous[[i]] + c(time.design[[i]] %*% c(gamma.i[1, ] * nu.vec))
+        }
+        l.pred.db[[q]] <- if (ordinal && q > 1L) {
+          lapply(seq_len(n), function(i) pmax(updated[[i]], l.pred.db[[q - 1L]][[i]]))
+        } else {
+          updated
+        }
       }
     }
     keep.q <- vapply(seq_len(n.q), function(q) isTRUE(keep.m[q] == m), logical(1))

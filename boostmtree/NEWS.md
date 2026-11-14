@@ -1,3 +1,20 @@
+# boostmtree 2.0.11
+
+Cleveland Clinic Foundation patched build.
+
+## Performance
+
+* A cross-validated prediction (`predict(..., use.cv.flag = TRUE)`, and so
+  every `partial.plot()` on a CV fit) is faster. At each boosting step, every
+  subject was checked against the step's out-of-bag list with `%in%` and then
+  `match()`, two linear scans per subject, so each step was quadratic in the
+  number of subjects. The step now walks the out-of-bag list once. Predictions
+  are bit-identical to 2.0.10. One partial prediction on 2000 simulated
+  subjects (M = 50) went from about 0.5 s to 0.28 s; the saving grows with the
+  number of subjects. On a 6250-subject fit, about 85% of each 4.8-minute
+  partial prediction was spent outside the tree predictions, in the step this
+  change speeds up.
+
 # boostmtree 2.0.10
 
 Cleveland Clinic Foundation patched build.
