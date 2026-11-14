@@ -182,7 +182,11 @@ test_that("partial.plot fills every response component from one prediction per g
       for (q.out in seq_along(pp$response.labels)) {
         response <- if (prob.class) p$prob.class[[q.out]] else p$mu[[q.out]]
         expected <- colMeans(do.call(rbind, lapply(response, function(s) s[time.info$index])))
-        expect_identical(unlist(pp$curves[[q.out]]$x1[k, -1], use.names = FALSE), expected)
+        # partial.plot() predicts on the chosen times only and this reference
+        # on the full grid; the matrix product can round the last digit
+        # differently between the two (seen on Linux), so compare to 1e-12.
+        expect_equal(unlist(pp$curves[[q.out]]$x1[k, -1], use.names = FALSE), expected,
+                     tolerance = 1e-12)
       }
     }
   }

@@ -8,8 +8,11 @@ Cleveland Clinic Foundation patched build.
   every subject at every distinct observed time and then kept the few columns
   it plots; with irregular measurement times (echo data can have thousands of
   distinct times) nearly all of that work was discarded. Each time point's
-  value is computed on its own, so the curves are bit-identical to 2.0.10,
-  including when two chosen time points resolve to the same observed time.
+  value is computed on its own, so the curves match 2.0.10, including when two
+  chosen time points resolve to the same observed time. They match to the
+  last bit on macOS and Windows; on Linux an occasional value differs in the
+  last digit (about 1e-17), because the matrix product that gives each time
+  point is rounded differently for a short time grid than for the full one.
 
 * A cross-validated prediction (`predict(..., use.cv.flag = TRUE)`, and a
   `partial.plot()` that uses the CV coefficients, the default for a CV fit
