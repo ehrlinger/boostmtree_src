@@ -1,3 +1,32 @@
+# boostmtree 2.0.11
+
+Cleveland Clinic Foundation patched build.
+
+## Performance
+
+* `partial.plot()` predicts at the chosen time points only. It predicted
+  every subject at every distinct observed time and then kept the few columns
+  it plots; with irregular measurement times (echo data can have thousands of
+  distinct times) nearly all of that work was discarded. Each time point's
+  value is computed on its own, so the curves match 2.0.10, including when two
+  chosen time points resolve to the same observed time. They match to the
+  last bit on macOS and Windows; on Linux an occasional value differs in the
+  last digit (about 1e-17), because the matrix product that gives each time
+  point is rounded differently for a short time grid than for the full one.
+
+* A cross-validated prediction (`predict(..., use.cv.flag = TRUE)`, and a
+  `partial.plot()` that uses the CV coefficients, the default for a CV fit
+  with no `subset`) is faster. A `partial.plot()` with `use.cv.flag = FALSE`
+  or a `subset` takes the ordinary path and is unchanged. At each boosting step, every
+  subject was checked against the step's out-of-bag list with `%in%` and then
+  `match()`, two linear scans per subject, so each step was quadratic in the
+  number of subjects. The step now walks the out-of-bag list once. Predictions
+  are bit-identical to 2.0.10. One partial prediction on 2000 simulated
+  subjects (M = 50) went from about 0.5 s to 0.28 s; the saving grows with the
+  number of subjects. On a 6250-subject fit, about 85% of each 4.8-minute
+  partial prediction was spent outside the tree predictions, in the step this
+  change speeds up.
+
 # boostmtree 2.0.10
 
 Cleveland Clinic Foundation patched build.
