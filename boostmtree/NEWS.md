@@ -4,8 +4,10 @@ Cleveland Clinic Foundation patched build.
 
 ## Performance
 
-* A cross-validated prediction (`predict(..., use.cv.flag = TRUE)`, and so
-  every `partial.plot()` on a CV fit) is faster. At each boosting step, every
+* A cross-validated prediction (`predict(..., use.cv.flag = TRUE)`, and a
+  `partial.plot()` that uses the CV coefficients, the default for a CV fit
+  with no `subset`) is faster. A `partial.plot()` with `use.cv.flag = FALSE`
+  or a `subset` takes the ordinary path and is unchanged. At each boosting step, every
   subject was checked against the step's out-of-bag list with `%in%` and then
   `match()`, two linear scans per subject, so each step was quadratic in the
   number of subjects. The step now walks the out-of-bag list once. Predictions
