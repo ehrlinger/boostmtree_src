@@ -31,6 +31,11 @@ Since then:
 * **2.0.10:** for an `na.omit` fit, `predict(x = )` and `partial = TRUE` drop
   rows of `x` with a missing covariate (with a warning) instead of stopping, and
   `boostmtree.control(cv.cores = )` rejects values that are not a whole number.
+* **2.0.11:** `partial.plot()` predicts only at the chosen time points, and a
+  cross-validated prediction walks each step's out-of-bag list once. On a
+  6250-subject fit with 10,940 distinct echo times, one `partial.plot()` step
+  went from 264 s to 42 s. Curves match 2.0.10 (on Linux an occasional value
+  can differ in the last digit, about 1e-17).
 
 The performance releases leave results unchanged, bit for bit. The package
 itself lives in the [`boostmtree/`](boostmtree) subdirectory of this repository.
@@ -40,11 +45,11 @@ itself lives in the [`boostmtree/`](boostmtree) subdirectory of this repository.
 ```r
 remotes::install_github("ehrlinger/boostmtree_src",
                         subdir = "boostmtree",
-                        ref    = "v2.0.10-ccf")
+                        ref    = "v2.0.11-ccf")
 ```
 
 A `vX.Y.Z-ccf` tag is cut for each release, and this line is updated to match
-the `Version:` in `boostmtree/DESCRIPTION`. If the `v2.0.10-ccf` tag is not yet published, install from the branch instead,
+the `Version:` in `boostmtree/DESCRIPTION`. If the `v2.0.11-ccf` tag is not yet published, install from the branch instead,
 or from a local clone with `remotes::install_local("boostmtree")` run from the
 repository root. Check the
 [tags page](https://github.com/ehrlinger/boostmtree_src/tags) for what is
