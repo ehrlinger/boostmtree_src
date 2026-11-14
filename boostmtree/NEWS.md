@@ -4,6 +4,13 @@ Cleveland Clinic Foundation patched build.
 
 ## Performance
 
+* `partial.plot()` predicts at the chosen time points only. It predicted
+  every subject at every distinct observed time and then kept the few columns
+  it plots; with irregular measurement times (echo data has thousands of
+  distinct times) nearly all of that work was discarded. Each time point's
+  value is computed on its own, so the curves are bit-identical to 2.0.10,
+  including when two chosen time points resolve to the same observed time.
+
 * A cross-validated prediction (`predict(..., use.cv.flag = TRUE)`, and a
   `partial.plot()` that uses the CV coefficients, the default for a CV fit
   with no `subset`) is faster. A `partial.plot()` with `use.cv.flag = FALSE`
