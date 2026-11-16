@@ -191,3 +191,44 @@ test_that("compacted node labels match the same way under any scipen", {
   fractional <- list(node.label = c(1.5, 2), coefficients = matrix(1:4 / 10, 2))
   expect_identical(boostmtree:::boostmtree.compact.gamma.step(fractional), fractional)
 })
+
+# object.size() does not count environments, but saveRDS() writes each one
+# out. Under randomForestSRC 3.9.0 and earlier every stored tree's
+# sampling-size closure carried rfsrc()'s working frame and its formula the
+# fitting function's frame, so a saved fit was several times its in-memory
+# size. These tests build such a tree by hand, so they fail without the fix on
+# any randomForestSRC version.
+test_that("a stored tree drops the frames its sampling-size closure and formula carried", {
+  d <- slim.data()
+  x <- d$features[!duplicated(d$id), ]
+  data <- data.frame(y1 = rnorm(nrow(x)), y2 = rnorm(nrow(x)), x, check.names = FALSE)
+  tree <- randomForestSRC::rfsrc(Multivar(y1, y2) ~ ., data = data, ntree = 1, seed = -7)
+  bloat <- function() {
+    ballast <- rnorm(5e5)
+    fraction <- 0.632
+    list(
+      sampsize = function(x) x * fraction,
+      formula = Multivar(y1, y2) ~ .,
+      expr = parse(text = "x * 0.5")
+    )
+  }
+  b <- bloat()
+  scaled <- local({ballast <- rnorm(5e5); expr <- b$expr; function(x) eval(expr, list(x = x))})
+  tree$sampsize <- b$sampsize
+  tree$forest$sampsize <- scaled
+  tree$call$formula <- b$formula
+  expect_gt(length(serialize(tree, NULL)), 8e6)
+
+  slim <- boostmtree:::boostmtree.slim.learner(tree, tree$forest$xvar)
+  expect_lt(length(serialize(slim, NULL)), 1e6)
+  expect_identical(environment(slim$call$formula), globalenv())
+  expect_identical(slim$sampsize(100), b$sampsize(100))
+  expect_identical(slim$forest$sampsize(100), scaled(100))
+  expect_setequal(ls(environment(slim$sampsize)), "fraction")
+  expect_setequal(ls(environment(slim$forest$sampsize)), "expr")
+})
+
+test_that("a fit saves at no more than its in-memory size", {
+  fit <- slim.fit()$fit
+  expect_lt(length(serialize(fit, NULL)), as.numeric(object.size(fit)))
+})
