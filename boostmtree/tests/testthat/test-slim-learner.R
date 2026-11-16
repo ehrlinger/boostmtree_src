@@ -86,15 +86,25 @@ test_that("a tree whose covariate frame differs keeps its own copy", {
   expect_identical(boostmtree:::boostmtree.restore.learner(slim, other)$forest$xvar, tree$forest$xvar)
 })
 
+# Under na.impute, randomForestSRC sends a subject with a missing covariate down
+# a random branch at prediction time, drawing its seed from R's generator. Two
+# predict() calls on the same fit can then differ for the incomplete subjects
+# (here subjects 2 and 5), so each pair below starts from the same seed.
+seeded <- function(expr) {
+  set.seed(5)
+  expr
+}
+
 test_that("predict() and vimp() match a fit holding full trees", {
   for (na.action in c("na.impute", "na.omit")) {
     o <- slim.fit(na.action = na.action)
     old <- unslim(o$fit)
-    expect_identical(predict(o$fit)$muhat, predict(old)$muhat)
-    expect_identical(predict(o$fit, use.cv.flag = TRUE)$muhat, predict(old, use.cv.flag = TRUE)$muhat)
+    expect_identical(seeded(predict(o$fit))$muhat, seeded(predict(old))$muhat)
+    expect_identical(seeded(predict(o$fit, use.cv.flag = TRUE))$muhat,
+                     seeded(predict(old, use.cv.flag = TRUE))$muhat)
     rows <- o$d$id %in% unique(o$d$id)[1:10]
-    p.new <- predict(o$fit, x = o$d$features[rows, ], tm = o$d$time[rows], id = o$d$id[rows], y = o$d$y[rows])
-    p.old <- predict(old, x = o$d$features[rows, ], tm = o$d$time[rows], id = o$d$id[rows], y = o$d$y[rows])
+    p.new <- seeded(predict(o$fit, x = o$d$features[rows, ], tm = o$d$time[rows], id = o$d$id[rows], y = o$d$y[rows]))
+    p.old <- seeded(predict(old, x = o$d$features[rows, ], tm = o$d$time[rows], id = o$d$id[rows], y = o$d$y[rows]))
     expect_identical(p.new$muhat, p.old$muhat)
     expect_identical(p.new$err.rate, p.old$err.rate)
     set.seed(9)
