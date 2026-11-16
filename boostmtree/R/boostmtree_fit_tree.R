@@ -239,10 +239,60 @@ boostmtree.fit.gamma.cluster <- function(subject.index, l.pred.current, y.curren
 # frame and crash R. Its class therefore leads with "boostmtree.learner", which
 # randomForestSRC's own class check rejects before any native call, and
 # predict() on it stops with an R error. Restoring drops that class again.
+#
+# Two parts of each tree also hold environments, which object.size() does not
+# count but saveRDS() writes out in full, once per distinct environment. Under
+# randomForestSRC 3.9.0 and earlier, the sampling-size function (`sampsize`,
+# also in `forest`) is a closure over rfsrc()'s own working frame (its copy of
+# the data, weights and work arrays), a different frame for every tree; and
+# the formula kept in `call` carries the frame of the boostmtree function that
+# built it. A fit of a few hundred MB in memory saved to several GB.
+# randomForestSRC 3.10.0 strips both itself; boostmtree does it too, so fits
+# stay small on either version. The sampling-size closure keeps only the free
+# variables its body reads (make.samplesize.function() reads one, `expr`), and
+# the formula, which names only columns, moves to the global environment.
+boostmtree.lean.closure <- function(f) {
+  if (!is.function(f) || is.primitive(f)) {
+    return(f)
+  }
+  is.top <- function(env) {
+    identical(env, globalenv()) || identical(env, baseenv()) ||
+      identical(env, emptyenv()) || isNamespace(env)
+  }
+  env <- environment(f)
+  if (is.null(env) || is.top(env)) {
+    return(f)
+  }
+  top <- env
+  while (!is.top(top)) top <- parent.env(top)
+  lean <- new.env(parent = top)
+  for (v in setdiff(all.names(body(f)), names(formals(f)))) {
+    home <- env
+    while (!is.top(home) && !exists(v, envir = home, inherits = FALSE)) home <- parent.env(home)
+    if (!is.top(home)) {
+      assign(v, get(v, envir = home, inherits = FALSE), envir = lean)
+    }
+  }
+  environment(f) <- lean
+  f
+}
 boostmtree.learner.dead.fields <- c("xvar", "yvar", "regrOutput", "membership", "imputed.data", "imputed.indv")
 boostmtree.slim.learner <- function(learner, shared.xvar) {
   slim <- unclass(learner)
   slim[intersect(boostmtree.learner.dead.fields, names(slim))] <- NULL
+  if (is.function(slim$sampsize)) {
+    slim$sampsize <- boostmtree.lean.closure(slim$sampsize)
+  }
+  if (is.function(slim$forest$sampsize)) {
+    slim$forest$sampsize <- boostmtree.lean.closure(slim$forest$sampsize)
+  }
+  if (is.call(slim$call) && inherits(slim$call$formula, "formula")) {
+    stored.call <- slim$call
+    formula <- stored.call$formula
+    environment(formula) <- globalenv()
+    stored.call$formula <- formula
+    slim$call <- stored.call
+  }
   if (!is.null(shared.xvar) && identical(slim$forest$xvar, shared.xvar)) {
     forest <- slim$forest
     forest["xvar"] <- list(NULL)

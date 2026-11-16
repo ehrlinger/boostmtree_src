@@ -1,6 +1,8 @@
 # Same-machine, bit-for-bit equivalence check for changes that only touch what
 # a fitted boostmtree object stores (2.0.9: slimmer stored rfsrc trees and
-# one-matrix-per-subject cross-validated coefficients).
+# one-matrix-per-subject cross-validated coefficients; 2.0.12: stored trees
+# no longer carry rfsrc's working frame or the fitting function's frame in
+# their sampling-size closure and formula).
 #
 # A storage change must not move any result. This script fits four models
 # (cv.flag TRUE/FALSE x na.action "na.impute"/"na.omit", with a factor
@@ -18,6 +20,10 @@
 #   Rscript tools/baseline/slim-learner-equivalence.R compare <before.rds> <after.rds>
 # <lib> is a library holding the boostmtree build to fingerprint.
 # compare exits 0 when every component is identical, 1 otherwise.
+# fingerprint also prints each fit's in-memory and serialized size; those are
+# what a storage change is meant to move, so they are reported, not compared.
+# Put a randomForestSRC library first on R_LIBS to fingerprint against a
+# particular randomForestSRC (the environment leak only shows under <= 3.9.0).
 
 args <- commandArgs(trailingOnly = TRUE)
 usage <- "usage: slim-learner-equivalence.R fingerprint <lib> <out.rds> | compare <before.rds> <after.rds>"
@@ -50,7 +56,8 @@ if (args[1] == "compare") {
 }
 
 suppressMessages(library(boostmtree, lib.loc = args[2]))
-cat("boostmtree", as.character(packageVersion("boostmtree", lib.loc = args[2])), "from", args[2], "\n")
+cat("boostmtree", as.character(packageVersion("boostmtree", lib.loc = args[2])), "from", args[2],
+    "with randomForestSRC", as.character(packageVersion("randomForestSRC")), "\n")
 
 # Drop what legitimately differs between two runs of the same code: matched
 # calls, and the stored trees themselves (the change under test).
@@ -101,6 +108,8 @@ for (cv in c(TRUE, FALSE)) {
     set.seed(11)
     fit <- boostmtree(x, d$time, d$id, d$y, family = "continuous", M = 12,
                       cv.flag = cv, na.action = na, mtry = 3, verbose = FALSE)
+    cat(sprintf("  %-20s object.size %6.2f MB, serialized %6.2f MB\n", tag,
+                as.numeric(object.size(fit)) / 2^20, length(serialize(fit, NULL)) / 2^20))
     out[[paste(tag, "fit")]] <- scrub(fit[c("mu", "err.rate", "rmse", "m.opt", "gamma",
                                            "lambda", "phi", "rho", "membership")])
     if (cv) {

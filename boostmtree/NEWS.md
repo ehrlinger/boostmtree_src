@@ -1,3 +1,27 @@
+# boostmtree 2.0.12
+
+Cleveland Clinic Foundation patched build.
+
+## Performance
+
+* A saved fit is much smaller under randomForestSRC 3.9.0 and earlier. Each
+  stored tree held two environments that `object.size()` does not count but
+  `saveRDS()` and `save()` write out in full: the tree's sampling-size
+  function (`$sampsize`, also in `$forest`) was a closure over rfsrc()'s own
+  working frame, a different one per tree, and the formula in its `$call`
+  carried the frame of the boostmtree function that fitted it. One study fit
+  of 630 MB in memory saved to 2.82 GB. Each stored tree now keeps only the
+  variables its sampling-size function reads, and its formula refers to the
+  global environment. randomForestSRC 3.10.0 already strips both, so fits made
+  with it are unchanged in size. Results are bit-identical to 2.0.11 under
+  randomForestSRC 3.9.0 and 3.10.0 (`predict()` with and without new data and
+  `use.cv.flag`, `partial.plot()`, `marginal.plot()` and `vimp()`). On a
+  simulated cross-validated fit (150 subjects, 5 times, 10 covariates,
+  M = 30) under randomForestSRC 3.9.0, the fit is 3.8 MB in memory; it
+  serialized to 14.8 MB and now to 2.1 MB, and its xz-compressed `.rds` went
+  from 2.82 MB to 1.12 MB. Fits saved by earlier versions keep their size
+  until refitted.
+
 # boostmtree 2.0.11
 
 Cleveland Clinic Foundation patched build.
