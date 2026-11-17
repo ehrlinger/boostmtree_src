@@ -36,6 +36,10 @@ Since then:
   6250-subject fit with 10,940 distinct echo times, one `partial.plot()` step
   went from 264 s to 42 s. Curves match 2.0.10 (on Linux an occasional value
   can differ in the last digit, about 1e-17).
+* **2.0.12:** stored trees no longer carry randomForestSRC's working frame or
+  the fitting function's frame, which under randomForestSRC 3.9.0 and earlier
+  made a saved fit several times its in-memory size (one study fit: 630 MB in
+  memory, 2.82 GB on disk). Fits made with randomForestSRC 3.10.0 are unchanged.
 
 The performance releases leave results unchanged, bit for bit. The package
 itself lives in the [`boostmtree/`](boostmtree) subdirectory of this repository.
@@ -45,11 +49,11 @@ itself lives in the [`boostmtree/`](boostmtree) subdirectory of this repository.
 ```r
 remotes::install_github("ehrlinger/boostmtree_src",
                         subdir = "boostmtree",
-                        ref    = "v2.0.11-ccf")
+                        ref    = "v2.0.12-ccf")
 ```
 
 A `vX.Y.Z-ccf` tag is cut for each release, and this line is updated to match
-the `Version:` in `boostmtree/DESCRIPTION`. If the `v2.0.11-ccf` tag is not yet published, install from the branch instead,
+the `Version:` in `boostmtree/DESCRIPTION`. If the `v2.0.12-ccf` tag is not yet published, install from the branch instead,
 or from a local clone with `remotes::install_local("boostmtree")` run from the
 repository root. Check the
 [tags page](https://github.com/ehrlinger/boostmtree_src/tags) for what is
