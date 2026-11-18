@@ -143,6 +143,20 @@ this build, not carried over**. That includes any saved `.rds` fit objects,
 cached model selections, and any `M` chosen from a pre-fix cross-validation
 curve. Refit from the data.
 
+### If you used `hvtiBoostmtree`
+
+`ehrlinger/hvtiBoostmtree` was an earlier internal fork, from the
+`kogalur/boostmtree` v1.5.1 lineage. It carries the same bug, unfixed
+(`R/boostmtree.R:1308` in its v2.0.1), and the repository was deleted on
+2026-11-18. Deleting it does not correct finished work.
+
+**If you ran an analysis with it using `cv.flag = TRUE`, audit it.** Everything
+that read the stored terminal-node coefficients (`gamma`) returned values far
+outside the observed response range, with no error: `predict(use.cv.flag =
+FALSE)`, `partialPlot()`, `marginalPlot()`, `muhat`, and `vimp()` on the
+non-cross-validated path. Refit with this build, where those functions are
+`partial.plot()` and `marginal.plot()`.
+
 ## Continuous integration
 
 * `.github/workflows/R-CMD-check.yaml`: `R CMD check --as-cran` on
