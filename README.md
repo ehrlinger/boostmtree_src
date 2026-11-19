@@ -40,8 +40,13 @@ Since then:
   the fitting function's frame, which under randomForestSRC 3.9.0 and earlier
   made a saved fit several times its in-memory size (one study fit: 630 MB in
   memory, 2.82 GB on disk). Fits made with randomForestSRC 3.10.0 are unchanged.
+* **2.0.13:** a fixed `boostmtree.control(seed = )` draws a fresh subsample at
+  each boosting iteration. It used to draw the same one every time, so under
+  `cv.flag = TRUE` about 63% of subjects were never out of bag and their
+  cross-validated `mu` was a flat line. Seeded fits change; fits without a
+  seed are bit-identical to 2.0.12.
 
-The performance releases leave results unchanged, bit for bit. The package
+Apart from 2.0.13, the performance releases leave results unchanged, bit for bit. The package
 itself lives in the [`boostmtree/`](boostmtree) subdirectory of this repository.
 
 ## Install
@@ -49,11 +54,11 @@ itself lives in the [`boostmtree/`](boostmtree) subdirectory of this repository.
 ```r
 remotes::install_github("ehrlinger/boostmtree_src",
                         subdir = "boostmtree",
-                        ref    = "v2.0.12-ccf")
+                        ref    = "v2.0.13-ccf")
 ```
 
 A `vX.Y.Z-ccf` tag is cut for each release, and this line is updated to match
-the `Version:` in `boostmtree/DESCRIPTION`. If the `v2.0.12-ccf` tag is not yet published, install from the branch instead,
+the `Version:` in `boostmtree/DESCRIPTION`. If the `v2.0.13-ccf` tag is not yet published, install from the branch instead,
 or from a local clone with `remotes::install_local("boostmtree")` run from the
 repository root. Check the
 [tags page](https://github.com/ehrlinger/boostmtree_src/tags) for what is

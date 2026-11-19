@@ -1,3 +1,24 @@
+# boostmtree 2.0.13
+
+Cleveland Clinic Foundation patched build.
+
+## Bug fixes
+
+* A fixed `boostmtree.control(seed = )` draws a fresh subsample at each
+  boosting iteration. The seed was handed to every per-iteration `rfsrc()`
+  call, so every tree drew the same subsample. Under `cv.flag = TRUE`, the
+  same subjects were then out of bag at every iteration and the rest never
+  were. A subject that is never out of bag keeps its starting cross-validated
+  prediction, the mean response of the other subjects, so its `mu` was a flat
+  line. On a simulated fit (100 subjects, 6 times, `M = 100`, `seed = 11`), 63
+  subjects were never out of bag and 60 had a constant `mu`. Now none are flat.
+  The cross-validated error, `m.opt` and grow-object `vimp()` drew on the same
+  fixed out-of-bag set and change too. The seed now seeds R's generator once
+  for the whole fit, and the caller's generator state is restored afterwards,
+  so a seeded fit neither reads nor moves it. Seeded fits change; fits without
+  a seed are bit-identical to 2.0.12 (checked with
+  `tools/baseline/fingerprint.R`).
+
 # boostmtree 2.0.12
 
 Cleveland Clinic Foundation patched build.
