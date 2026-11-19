@@ -623,6 +623,21 @@ boostmtree.finalize.fit <- function(model.info, fit.info, cv.state = NULL) {
   )
 }
 boostmtree.fit.tree <- function(model.info) {
+  # A fixed seed drives R's generator for the whole fit, and each rfsrc() call
+  # draws its subsample from that generator. Handing the seed to every rfsrc()
+  # call instead drew the same subsample at every iteration: under cv.flag the
+  # same subjects were out of bag every time and the rest never were, so their
+  # cross-validated mu stayed at the starting value. The caller's generator
+  # state is put back on exit, so a seeded fit neither reads nor moves it.
+  if (!is.null(model.info$control$seed)) {
+    caller.seed <- if (exists(".Random.seed", envir = globalenv(), inherits = FALSE)) {
+      get(".Random.seed", envir = globalenv())
+    }
+    on.exit(if (is.null(caller.seed)) {
+      if (exists(".Random.seed", envir = globalenv(), inherits = FALSE)) rm(".Random.seed", envir = globalenv())
+    } else assign(".Random.seed", caller.seed, envir = globalenv()), add = TRUE)
+    set.seed(model.info$control$seed)
+  }
   if (model.info$family == "continuous") {
     model.info$nr.iter <- 1L
   }
@@ -804,7 +819,7 @@ boostmtree.fit.tree <- function(model.info) {
         membership = TRUE,
         na.action = model.info$na.action,
         nimpute = 1,
-        seed = model.info$control$seed
+        seed = NULL
       )
       if (is.null(base.learner.xvar)) {
         base.learner.xvar <- rfsrc.object$forest$xvar

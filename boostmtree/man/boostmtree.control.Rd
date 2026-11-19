@@ -51,7 +51,11 @@ boostmtree.control(
   \item{case.wt}{Optional case weights.}
 
   \item{seed}{Optional integer seed used to reproduce the random parts of tree
-    fitting. This affects reproducibility only; it does \emph{not} turn
+    fitting. It seeds R's random number generator once for the whole fit, so
+    each boosting iteration still draws its own subsample, and the caller's
+    generator state is restored afterwards. \code{NULL} draws from the
+    caller's generator, so \code{set.seed()} before the call also reproduces
+    the fit. This affects reproducibility only; it does \emph{not} turn
     out-of-bag sampling on or off.}
 
   \item{cv.lambda}{Logical; should the CV path use the cross-validated mean when
